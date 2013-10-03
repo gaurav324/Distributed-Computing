@@ -10,6 +10,7 @@ package ut.distcomp.framework;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 
 public class ListenServer extends Thread {
@@ -20,10 +21,13 @@ public class ListenServer extends Thread {
 	final List<IncomingSock> socketList;
 	final Config conf;
 	final ServerSocket serverSock;
+	ConcurrentLinkedQueue<String> queue;
 
-	protected ListenServer(Config conf, List<IncomingSock> sockets) {
+	protected ListenServer(Config conf, List<IncomingSock> sockets, 
+			ConcurrentLinkedQueue<String> queue) {
 		this.conf = conf;
 		this.socketList = sockets;
+		this.queue = queue;
 
 		procNum = conf.procNum;
 		port = conf.ports[procNum];
@@ -44,10 +48,10 @@ public class ListenServer extends Thread {
 		while (!killSig) {
 			try {
 				IncomingSock incomingSock = new IncomingSock(
-						serverSock.accept());
+						serverSock.accept(), conf, queue);
 				socketList.add(incomingSock);
 				incomingSock.start();
-				conf.logger.fine(String.format(
+				conf.logger.info(String.format(
 						"Server %d: New incoming connection accepted from %s",
 						procNum, incomingSock.sock.getInetAddress()
 								.getHostName()));

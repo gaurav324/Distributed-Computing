@@ -14,26 +14,33 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.logging.Level;
 
 public class IncomingSock extends Thread {
 	final static String MSG_SEP = "&";
 	Socket sock;
 	InputStream in;
 	private volatile boolean shutdownSet;
-	private final ConcurrentLinkedQueue<String> queue;
+	//private final ConcurrentLinkedQueue<String> queue;
+	ConcurrentLinkedQueue<String> queue;
 	int bytesLastChecked = 0;
+	Config conf;
 	
-	protected IncomingSock(Socket sock) throws IOException {
+	protected IncomingSock(Socket sock, Config conf, 
+			ConcurrentLinkedQueue<String> queue) throws IOException {
 		this.sock = sock;
 		in = new BufferedInputStream(sock.getInputStream());
 		//in = sock.getInputStream();
 		sock.shutdownOutput();
-		queue = new ConcurrentLinkedQueue<String>();
+		this.queue = queue;
+		//queue = new ConcurrentLinkedQueue<String>();
+		this.conf = conf;
 	}
 	
 	protected List<String> getMsgs() {
 		List<String> msgs = new ArrayList<String>();
 		String tmp;
+		conf.logger.log(Level.INFO, "Queue size" + queue.size());
 		while((tmp = queue.poll()) != null)
 			msgs.add(tmp);
 		return msgs;
@@ -61,8 +68,10 @@ public class IncomingSock extends Thread {
 					bytesLastChecked = avail - curPtr;
 				}
 			} catch (IOException e) {
+				conf.logger.log(Level.INFO, "Exception" + e.toString());
 				e.printStackTrace();
 			} catch (InterruptedException e) {
+				conf.logger.log(Level.INFO, "Exception" + e.toString());
 				e.printStackTrace();
 			}
 		}

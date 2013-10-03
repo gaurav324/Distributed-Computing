@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 
 /**
@@ -31,10 +32,10 @@ public class NetController {
 	private final OutgoingSock[] outSockets;
 	private final ListenServer listener;
 	
-	public NetController(Config config) {
+	public NetController(Config config, ConcurrentLinkedQueue<String> queue) {
 		this.config = config;
 		inSockets = Collections.synchronizedList(new ArrayList<IncomingSock>());
-		listener = new ListenServer(config, inSockets);
+		listener = new ListenServer(config, inSockets, queue);
 		outSockets = new OutgoingSock[config.numProcesses];
 		listener.start();
 	}
@@ -97,6 +98,7 @@ public class NetController {
 	 */
 	public synchronized List<String> getReceivedMsgs() {
 		List<String> objs = new ArrayList<String>();
+		config.logger.log(Level.INFO, "Looking for messages.");
 		synchronized(inSockets) {
 			ListIterator<IncomingSock> iter  = inSockets.listIterator();
 			while (iter.hasNext()) {
