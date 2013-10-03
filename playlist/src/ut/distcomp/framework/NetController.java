@@ -32,8 +32,9 @@ public class NetController {
 	private final OutgoingSock[] outSockets;
 	private final ListenServer listener;
 	
-	public NetController(Config config, ConcurrentLinkedQueue<String> queue) {
+	public NetController(int processId, Config config, ConcurrentLinkedQueue<String> queue) {
 		this.config = config;
+		this.config.procNum = processId;
 		inSockets = Collections.synchronizedList(new ArrayList<IncomingSock>());
 		listener = new ListenServer(config, inSockets, queue);
 		outSockets = new OutgoingSock[config.numProcesses];
@@ -48,6 +49,15 @@ public class NetController {
 		outSockets[proc] = new OutgoingSock(new Socket(config.addresses[proc], config.ports[proc]));
 		config.logger.info(String.format("Server %d: Socket to %d established", 
 				config.procNum, proc));
+	}
+	
+	public synchronized void sendMsgs(String msg)
+	{
+		for (int i=0; i < outSockets.length; ++i) {
+			if (i != config.procNum) {
+				sendMsg(i, msg);
+			}
+		}
 	}
 	
 	/**
