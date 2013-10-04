@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 
@@ -51,7 +52,14 @@ public class NetController {
 				config.procNum, proc));
 	}
 	
-	public synchronized void sendMsgs(String msg)
+	public synchronized void sendMsgs(Set<Integer> processes, String msg) {
+		for(Integer processNo: processes) {
+			System.out.println("Sending " + msg + " to " + processNo);
+			sendMsg(processNo, msg);
+		}
+	}
+	
+	public synchronized void broadCastMsgs(String msg)
 	{
 		for (int i=0; i < outSockets.length; ++i) {
 			if (i != config.procNum) {
