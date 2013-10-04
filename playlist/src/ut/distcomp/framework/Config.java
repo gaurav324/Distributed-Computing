@@ -26,7 +26,7 @@ public class Config {
 	 */
 	public Config(String filename) throws FileNotFoundException, IOException {
 		logger = Logger.getLogger("NetFramework");
-		logger.setLevel(Level.FINEST);
+		//logger.setLevel(Level.FINEST);
 
 		Properties prop = new Properties();
 		prop.load(new FileInputStream(filename));

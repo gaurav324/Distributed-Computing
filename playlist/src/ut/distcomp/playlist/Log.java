@@ -7,7 +7,7 @@ import java.util.*;
 public class Log {
 
 // To write log to the file	
-	public void WriteToLog(int process_id,String msg) throws IOException {
+	public void WriteToLog(int process_id, String msg) throws IOException {
 		final File Log_folder = new File(System.getProperty("user.dir"), "Process_logs");
 		if(!Log_folder.exists()){
 		   if(Log_folder.mkdirs()){
