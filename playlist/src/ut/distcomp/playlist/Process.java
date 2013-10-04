@@ -11,11 +11,12 @@ import java.util.logging.Level;
 
 import ut.distcomp.framework.Config;
 import ut.distcomp.framework.NetController;
-import ut.distcomp.framework.Queue;
+import ut.distcomp.playlist.Transaction;
+import ut.distcomp.playlist.TransactionState.*;
 
 public class Process {
 	// Heartbeat pumping time gap in milli seconds. 
-	public static final int HEARTBEAT_PUMP_TIME = 500;
+	public static final int HEARTBEAT_PUMP_TIME = 5000;
 	
 	// Maintain your own playlist.
 	Hashtable<String, String> playList;
@@ -35,16 +36,21 @@ public class Process {
 	// Event queue for storing all the messages from the wire.
 	final ConcurrentLinkedQueue<String> queue;
 	
-	// State of the current process. {RESTING, UNCERTAIN, COMMITABLE, DECIDED}
-	ProcessState current_state;
-	
 	// Map of the UP Processes. ProcessId to time last updated.
 	Hashtable<Integer, Long> upProcess;
+	
+	// Current transaction if any-running currently. At one time, we would 
+	// only serve one single transaction like (Add, Delete or Update).
+	Transaction activeTransaction;
+	
+	// This variable contains the process number of the coordinator.
+	int coordinatorProcessNumber;
 	
 	public Process(int processId) {
 		this.processId = processId;
 		this.configName = System.getProperty("CONFIG_NAME");
 		this.upProcess = new Hashtable<Integer, Long>();
+		this.coordinatorProcessNumber = 0;
 		
 		try {
 			this.config = new Config(this.configName);
@@ -90,7 +96,7 @@ public class Process {
 					e1.printStackTrace();
 				}
         		while(true) {
-        			controller.sendMsgs(heartBeat.toString());
+        			controller.broadCastMsgs(heartBeat.toString());
         			try {
 						Thread.sleep(HEARTBEAT_PUMP_TIME);
 					} catch (InterruptedException e) {
@@ -114,7 +120,70 @@ public class Process {
 		    			switch(message.type) {
 		    				case HEARTBEAT: {
 		    					updateProcessList(message);
+		    					break;
 		    				} // End of Heartbeat case.
+		    				case ADD:
+		    				case DELETE:
+		    				case UPDATE: {
+		    					if (coordinatorProcessNumber == processId) {
+		    						if (activeTransaction != null) {
+			    						config.logger.warning("A transaction is already running. Ignoring this request.");
+			    						break;
+		    						}
+		    						startNewTransaction(message);
+		    					} else {
+		    						config.logger.warning("I am not the coordiantor. Don't send me: " + message.type);
+		    					}
+		    					break;
+		    				} // End of ADD/DELTE/UPDATE case.
+		    				case VOTE_REQ: {
+		    					if (coordinatorProcessNumber == processId) {
+		    						config.logger.warning(message.type + " sent by: " + message.process_id);
+		    						config.logger.warning("There is something wrong. Coordiantor is not supposed to get " + message.type);
+		    					} else {
+		    						if (activeTransaction == null) {
+		    							startNewTransaction(message);
+		    						} else {
+		    							config.logger.warning(message.type + " sent by: " + message.process_id);
+			    						config.logger.warning("I should not get a VOTE-REQ if transaction is already running.");
+		    						}
+		    					}
+		    					break;
+		    				}
+		    				case PRE_COMMIT:
+		    				case COMMIT:
+		    				case ABORT: {
+		    					if (coordinatorProcessNumber == processId) {
+		    						config.logger.warning(message.type + " sent by: " + message.process_id);
+		    						config.logger.warning("There is something wrong. Coordiantor is not supposed to get " + message.type);
+		    						break;
+		    					} else {
+		    						if (activeTransaction != null) {
+		    							activeTransaction.update(message);
+		    						} else {
+		    							config.logger.warning(message.type + " sent by: " + message.process_id);
+			    						config.logger.warning("I should not get a " +  message.type + " if transaction is not running.");
+		    						}
+		    						break;
+		    					}
+		    				} // End of messages received by the normal process.
+		    				case YES:
+		    				case NO:
+		    				case ACK: {
+		    					if (coordinatorProcessNumber != processId) {
+		    						config.logger.warning(message.type + " sent by: " + message.process_id);
+		    						config.logger.warning("There is something wrong. I am not coorindator. Coordinator should get " + message.type);
+		    						break;
+		    					} else {
+		    						if (activeTransaction != null) {
+		    							activeTransaction.update(message);
+		    						} else {
+		    							config.logger.warning(message.type + " sent by: " + message.process_id);
+			    						config.logger.warning("I should not get a " +  message.type + " if transaction is not running.");
+		    						}
+		    					}
+		    					break;
+		    				}
 		    			}
 	        		}
 	        	}
@@ -155,6 +224,21 @@ public class Process {
         };
         
         th.start(); // Start the thread.
+	}
+	
+	public void startNewTransaction(Message message) {
+		if (coordinatorProcessNumber == processId) {
+			activeTransaction = new CoordinatorTransaction(this, message);
+		} else {
+			activeTransaction = new Transaction(this, message);
+		}
+		
+		Thread thread = new Thread(activeTransaction);
+		thread.start();
+	}
+	
+	public void notifyTransactionComplete() {
+		System.out.println("Transaction is complete. We are going to: " + activeTransaction.state);
 	}
 }
 
