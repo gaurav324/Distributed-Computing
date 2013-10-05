@@ -8,8 +8,6 @@ import javax.annotation.processing.Processor;
 import ut.distcomp.playlist.TransactionState.STATE;
 
 public class CoordinatorTransaction extends Transaction {
-	private final int DECISION_TIMEOUT = 2000;
-	
 	// Set of processes from where I am expecting an response.
 	Set<Integer> processWaitSet;
 	
@@ -32,13 +30,13 @@ public class CoordinatorTransaction extends Transaction {
 		while((state != STATE.COMMIT && state != STATE.ABORT) || processWaitSet.size() > 0) {
 			
 			if(state == STATE.RESTING) {
+				// Update your state to waiting for all the decisions to arrive.
+				state = STATE.WAIT_DECISION;
+				
 				// If we have come here, it means that we just received a new Transaction request.
 				Message msg = new Message(process.processId, MessageType.VOTE_REQ, command);
 				processWaitSet.addAll(process.upProcess.keySet());
 				process.controller.sendMsgs(processWaitSet, msg.toString());
-				
-				// Update your state to waiting for all the decisions to arrive.
-				state = STATE.WAIT_DECISION;
 				
 				// Timeout if all the process don't reply back with a Yes or No.
 				Thread th = new Thread() {
@@ -49,12 +47,17 @@ public class CoordinatorTransaction extends Transaction {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
-						if (processWaitSet.size() > 0 || abortFlag) {
-							if (processWaitSet.size() > 0) {
-								reasonToAbort = "Did not get a reply from some processes.";
-							}
-							abortTransaction();
+						System.out.println("trying to get the lock.");
+						lock.lock();
+						state = STATE.DECISION_RECEIVED;
+						if (processWaitSet.size() > 0 ) {
+							reasonToAbort = "Did not get a reply from some processes.";
+							abortFlag = true;
 						}
+						System.out.println("Going to signal.");
+						nextMessageArrived.signal();
+						System.out.println("Signal done..");
+						lock.unlock();
 					}
 				};
 				th.start();
@@ -77,6 +80,56 @@ public class CoordinatorTransaction extends Transaction {
 				}
 				
 			} // End of STATE.WAIT_DECISION.
+			else if (state == STATE.DECISION_RECEIVED) {
+				if (abortFlag) {
+					abortTransaction();
+				} else {
+					// Send PRE_COMMIT message to all of them.
+					Message msg = new Message(process.processId, MessageType.PRE_COMMIT, command);
+					processWaitSet = positiveResponseSet;
+					positiveResponseSet = new HashSet<Integer>();
+					process.controller.sendMsgs(processWaitSet, msg.toString());
+					
+					// Update your state to waiting for all the decisions to arrive.
+					state = STATE.WAIT_ACK;
+					
+					// Timeout if all the process don't reply back with a Yes or No.
+					Thread th = new Thread() {
+						public void run(){
+							try {
+								Thread.sleep(DECISION_TIMEOUT);
+							} catch (InterruptedException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							lock.lock();
+							state = STATE.ACK_RECEIVED;
+							nextMessageArrived.signal();
+							lock.unlock();
+						}
+					};
+					th.start();
+				}
+			} // End of STATE.DECISION_RECEIVED.
+			else if (state == STATE.WAIT_ACK) {
+				if (message.type != MessageType.ACK) {
+					process.config.logger.warning("Co-ordinator was waiting for Acknowledgement." + 
+							" However got a " + message.type + ".");
+				}
+				processWaitSet.remove(message.process_id);
+				positiveResponseSet.add(message.process_id);
+				if (processWaitSet.size() == 0) {
+					process.config.logger.info("Successfully got all the acknowledgements.");
+				}
+			} // End of STATE.WAIT_ACK.
+			else if (state == STATE.ACK_RECEIVED) {
+				Message msg = new Message(process.processId, MessageType.COMMIT, command);
+				state = STATE.COMMIT;
+				process.config.logger.info("Co-ordinator has finally committed.");
+				process.controller.sendMsgs(positiveResponseSet, msg.toString());
+				positiveResponseSet.clear();
+				processWaitSet.clear();
+			}
 			
 			try {
 				// Wait until some other message is arrived.

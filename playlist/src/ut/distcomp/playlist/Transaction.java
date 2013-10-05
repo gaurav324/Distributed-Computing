@@ -14,8 +14,7 @@ import ut.distcomp.playlist.TransactionState.STATE;
  *
  */
 public class Transaction implements Runnable {
-	static final int TIMEOUT = 2000;
-
+	public final int DECISION_TIMEOUT = 2000;
 	
 	// Reference to the process starting this transaction.
 	Process process;
@@ -35,7 +34,7 @@ public class Transaction implements Runnable {
 
 	// This variable is for telling whether a process wants to 
 	// accept this transaction or not.
-	public boolean decision = false;
+	public boolean decision = true;
 	
 	// This is to determine whether to send an abort decision to coordinator or not.
 	public boolean sendAbort = true;
@@ -59,6 +58,7 @@ public class Transaction implements Runnable {
 				// If we don't like the song, we will simply abort.
 				if (!decision) {
 					state = STATE.ABORT;
+					process.config.logger.warning("Transaction aborted. Not ready for this message.");
 					if(sendAbort) {
 						Message msg = new Message(process.processId, MessageType.NO, " ");
 						process.controller.sendMsg(process.coordinatorProcessNumber, msg.toString());
@@ -69,10 +69,65 @@ public class Transaction implements Runnable {
 					Message msg = new Message(process.processId, MessageType.YES, " ");
 					process.controller.sendMsg(process.coordinatorProcessNumber, msg.toString());
 					process.config.logger.warning("Update state to UNCERTAIN after sending a YES.");
+					
+					// Timeout if all the process don't reply back with a Yes or No.
+					Thread th = new Thread() {
+						public void run(){
+							try {
+								Thread.sleep(DECISION_TIMEOUT);
+							} catch (InterruptedException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							lock.lock();
+							if (state == STATE.UNCERTAIN) {
+								// RUN TERMINATION PROTOCOL.
+							}
+							lock.unlock();
+						}
+					};
+					th.start();
 				}
 			} else if (state == STATE.UNCERTAIN) {
 				if (message.type == MessageType.ABORT) {
-					System.out.println("Abort received from coordinator.");
+					state = STATE.COMMIT;
+					process.config.logger.info("Transaction aborted. Co-ordinator sent an abort." );
+				}
+				else if (message.type == MessageType.PRE_COMMIT) {
+					state = STATE.COMMITABLE;
+					
+					Message msg = new Message(process.processId, MessageType.ACK, " ");
+					process.controller.sendMsg(process.coordinatorProcessNumber, msg.toString());
+					process.config.logger.warning("Update state to COMMITABLE after sending ACK.");
+					
+					// Timeout if all the process don't reply back with a Yes or No.
+					Thread th = new Thread() {
+						public void run(){
+							try {
+								Thread.sleep(DECISION_TIMEOUT);
+							} catch (InterruptedException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							lock.lock();
+							if (state == STATE.COMMITABLE) {
+								// RUN TERMINATION PROTOCOL.
+							}
+							lock.unlock();
+						}
+					};
+					th.start();
+				} else {
+					process.config.logger.warning("Was expecting either an ABORT or PRE_COMMIT." +
+							"However, received a: " + message.type);
+				}
+			} else if (state == STATE.COMMITABLE) {
+				if (message.type == MessageType.COMMIT) {
+					state = STATE.COMMIT;
+					process.config.logger.info("Transaction Committed.");
+				} else {
+					process.config.logger.warning("Was expecting only a COMMIT message." +
+							"However, received a: " + message.type);
 				}
 			}
 			
@@ -91,6 +146,7 @@ public class Transaction implements Runnable {
 		lock.lock();
 		
 		this.message = message;
+		System.out.println("Received: " + this.message);
 		nextMessageArrived.signal();
 		
 		lock.unlock();
