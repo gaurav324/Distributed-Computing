@@ -59,6 +59,7 @@ public class Transaction implements Runnable {
 				// If we have come here, it means that we just received a VOTE-REQ.
 				// If we don't like the song, we will simply abort.
 				if (!decision) {
+					process.dtLogger.write(STATE.ABORT);
 					state = STATE.ABORT;
 					process.config.logger.warning("Transaction aborted. Not ready for this message.");
 					if(sendAbort) {
@@ -70,6 +71,7 @@ public class Transaction implements Runnable {
 					}
 				} else {
 					// Send coordinator a YES.
+					process.dtLogger.write(STATE.UNCERTAIN);
 					state = STATE.UNCERTAIN;
 					process.config.logger.info("Received: " + message.toString());
 					Message msg = new Message(process.processId, MessageType.YES, " ");
@@ -99,6 +101,7 @@ public class Transaction implements Runnable {
 				}
 			} else if (state == STATE.UNCERTAIN) {
 				if (message.type == MessageType.ABORT) {
+					process.dtLogger.write(STATE.ABORT);
 					state = STATE.ABORT;
 					process.config.logger.info("Transaction aborted. Co-ordinator sent an abort." );
 				}
@@ -137,6 +140,7 @@ public class Transaction implements Runnable {
 			} else if (state == STATE.COMMITABLE) {
 				process.config.logger.info("Received: " + message.toString());
 				if (message.type == MessageType.COMMIT) {
+					process.dtLogger.write(STATE.COMMIT);
 					state = STATE.COMMIT;
 					process.config.logger.info("Transaction Committed.");
 				} else {

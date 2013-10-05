@@ -7,7 +7,7 @@ import time
 
 from optparse import OptionParser
 
-execute_command = """java -classpath %(root)s/playlist/src:%(root)s/playlist/bin -DCONFIG_NAME="%(root)s/playlist/src/config.properties" -DDELAY="%(delay)s" ut.distcomp.playlist.Process %(process_no)s
+execute_command = """java -classpath %(root)s/playlist/src:%(root)s/playlist/bin -DCONFIG_NAME="%(root)s/playlist/src/config.properties" -DLOG_FOLDER="/tmp" -DDELAY="%(delay)s" ut.distcomp.playlist.Process %(process_no)s
 """
 
 def start_process(opts, args):
@@ -69,8 +69,8 @@ def getopts():
     parser.add_option("--root",
                       help="Location where you have copied the project.")
 
-    parser.add_option("--demo1",
-                      help="View demo1.")
+    parser.add_option("--demo",
+                      help="View demo. You have total X demos.")
 
     opts,args = parser.parse_args()
 
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     import atexit
     atexit.register(killAll, pid_map=proc)
 
-    if (opts.demo1):
+    if (opts.demo == str(1)):
         print "We would start a transaction and then kill one process (non-coordinator) before sending a YES.\n"
         print "Please monitor logs\n"
 

@@ -48,6 +48,8 @@ public class Process {
 	// This variable contains the process number of the coordinator.
 	int coordinatorProcessNumber;
 	
+	public DTLog dtLogger;
+	
 	//// VARIABLES FOR INTERACTION WITH THE SYSTEM ////
 	static int delay;
 	
@@ -59,7 +61,7 @@ public class Process {
 		this.coordinatorProcessNumber = 0;
 		
 		try {
-			Handler fh = new FileHandler("/tmp/" + processId + ".log");
+			Handler fh = new FileHandler(System.getProperty("LOG_FOLDER") + "/" + processId + ".log");
 			fh.setLevel(Level.FINEST);
 			
 			config = new Config(this.configName, fh);
@@ -73,6 +75,8 @@ public class Process {
 		}
 		this.queue = new Queue<String>();
 		this.controller = new NetController(this.processId, this.config, this.queue);
+		
+		this.dtLogger = new DTLog(this);
 	}
 	
 	public static void main(String[] args) {

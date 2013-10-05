@@ -131,6 +131,7 @@ public class CoordinatorTransaction extends Transaction {
 			} // End of STATE.WAIT_ACK.
 			else if (state == STATE.ACK_RECEIVED) {
 				Message msg = new Message(process.processId, MessageType.COMMIT, command);
+				process.dtLogger.write(STATE.COMMIT);
 				state = STATE.COMMIT;
 				process.config.logger.info("Acknowledgments have been received.");
 				Process.waitTillDelay();
@@ -161,6 +162,7 @@ public class CoordinatorTransaction extends Transaction {
 	}
 	
 	public void abortTransaction() {
+		process.dtLogger.write(STATE.ABORT);
 		state = STATE.ABORT;
 		process.config.logger.warning("Transaction aborted: " + reasonToAbort);
 		
