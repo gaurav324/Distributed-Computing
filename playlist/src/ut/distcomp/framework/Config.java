@@ -12,7 +12,12 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Properties;
+import java.util.logging.FileHandler;
+import java.util.logging.Formatter;
+import java.util.logging.Handler;
 import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
 public class Config {
@@ -24,8 +29,42 @@ public class Config {
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 */
-	public Config(String filename) throws FileNotFoundException, IOException {
+	public Config(String filename, Handler fh) throws FileNotFoundException, IOException {
 		logger = Logger.getLogger("NetFramework");
+		
+		logger.setUseParentHandlers(false);
+		
+		Logger globalLogger = Logger.getLogger("global");
+		Handler[] handlers = globalLogger.getHandlers();
+		for(Handler handler : handlers) {
+		    globalLogger.removeHandler(handler);
+		}
+		
+		Formatter formatter = new Formatter() {
+
+            @Override
+            public String format(LogRecord arg0) {
+                StringBuilder b = new StringBuilder();
+//                b.append("[");
+//                b.append(arg0.getSourceClassName());
+//                b.append("-");
+//                b.append(arg0.getSourceMethodName());
+//                b.append(" ");
+//                b.append("] ");
+                b.append(arg0.getLevel());
+                b.append("-");
+                b.append(arg0.getMessage());
+                b.append(System.getProperty("line.separator"));
+                return b.toString();
+            }
+
+        };
+		fh.setFormatter(formatter);
+		logger.addHandler(fh);
+		
+        LogManager lm = LogManager.getLogManager();
+        lm.addLogger(logger);
+
 		//logger.setLevel(Level.FINEST);
 
 		Properties prop = new Properties();

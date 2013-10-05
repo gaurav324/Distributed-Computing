@@ -69,6 +69,9 @@ def getopts():
     parser.add_option("--root",
                       help="Location where you have copied the project.")
 
+    parser.add_option("--demo1",
+                      help="View demo1.")
+
     opts,args = parser.parse_args()
 
     return opts, args
@@ -81,10 +84,27 @@ if __name__ == "__main__":
     opts, args = getopts()
 
     # A list of processes is here.
-    pid_map, conn = start_process(opts, args)
+    proc, conn = start_process(opts, args)
     
     import atexit
-    atexit.register(killAll, pid_map=pid_map)
+    atexit.register(killAll, pid_map=proc)
 
+    if (opts.demo1):
+        print "We would start a transaction and then kill one process (non-coordinator) before sending a YES.\n"
+        print "Please monitor logs\n"
+
+        time.sleep(float(opts.delay))
+        conn[0].send("11--ADD--tumhiho=http://Aashiqui&");
+        
+        # Waiting for vote-request to reach.
+        time.sleep(float(opts.delay))
+
+        # Extra buffer to ensure the process has received VOTE-REQ.
+        time.sleep(1)
+
+        # Before that responds let us kill that.
+        print "Killing Process 1\n"
+        proc[1].kill()
+    
     from IPython import embed
     embed()

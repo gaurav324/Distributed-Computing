@@ -7,6 +7,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
 import java.util.logging.Level;
 
 import ut.distcomp.framework.Config;
@@ -31,7 +33,7 @@ public class Process {
 	String configName;
 	
 	// Instance that would read the configuration file.
-	Config config;
+	static Config config;
 
 	// Event queue for storing all the messages from the wire.
 	final ConcurrentLinkedQueue<String> queue;
@@ -46,14 +48,22 @@ public class Process {
 	// This variable contains the process number of the coordinator.
 	int coordinatorProcessNumber;
 	
+	//// VARIABLES FOR INTERACTION WITH THE SYSTEM ////
+	static int delay;
+	
 	public Process(int processId) {
 		this.processId = processId;
 		this.configName = System.getProperty("CONFIG_NAME");
+		delay = Integer.parseInt(System.getProperty("DELAY"));
 		this.upProcess = new Hashtable<Integer, Long>();
 		this.coordinatorProcessNumber = 0;
 		
 		try {
-			this.config = new Config(this.configName);
+			Handler fh = new FileHandler("/tmp/" + processId + ".log");
+			fh.setLevel(Level.FINEST);
+			
+			config = new Config(this.configName, fh);
+			
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -195,7 +205,7 @@ public class Process {
 	// Update the list processes.
 	public void updateProcessList(Message message) {
 		if (!upProcess.containsKey(message.process_id)) {
-			System.out.println(String.format("Adding %d to the upProcess list", message.process_id));
+			//config.logger.info(String.format("Adding %d to the upProcess list", message.process_id));
 		}
 		upProcess.put(message.process_id, System.currentTimeMillis());
 	}
@@ -216,7 +226,7 @@ public class Process {
 	        	        
 	        	        if (System.currentTimeMillis() - entry.getValue() > (HEARTBEAT_PUMP_TIME + 500)) {
 	        	            i.remove();
-	        	            config.logger.warning(String.format("Process %d seems to dead.", entry.getKey()));
+	        	            //config.logger.warning(String.format("Process %d seems to dead. Clearing from up list.", entry.getKey()));
 	        	        }
 	        	    }
         		}
@@ -239,6 +249,16 @@ public class Process {
 	
 	public void notifyTransactionComplete() {
 		System.out.println("Transaction is complete. We are going to: " + activeTransaction.state);
+	}
+	
+	public static void waitTillDelay() {
+		try {
+			config.logger.info("Waiting for " + Process.delay / 1000 + " secs.");
+			Thread.sleep(Process.delay);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }
 
