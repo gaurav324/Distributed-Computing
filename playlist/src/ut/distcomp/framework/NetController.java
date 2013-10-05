@@ -54,7 +54,7 @@ public class NetController {
 	
 	public synchronized void sendMsgs(Set<Integer> processes, String msg) {
 		for(Integer processNo: processes) {
-			System.out.println("Sending " + msg + " to " + processNo);
+			config.logger.info("Sending: " + msg + " to " + processNo);
 			sendMsg(processNo, msg);
 		}
 	}

@@ -1,5 +1,6 @@
 package ut.distcomp.playlist;
 
+import java.util.Arrays;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -14,7 +15,7 @@ import ut.distcomp.playlist.TransactionState.STATE;
  *
  */
 public class Transaction implements Runnable {
-	public final int DECISION_TIMEOUT = 2000;
+	public int DECISION_TIMEOUT = 2000;
 	
 	// Reference to the process starting this transaction.
 	Process process;
@@ -46,6 +47,7 @@ public class Transaction implements Runnable {
 		this.process = process;
 		this.command = message.payLoad;
 		this.message = message;
+		this.DECISION_TIMEOUT = DECISION_TIMEOUT + process.delay;
 	}
 	
 	@Override
@@ -60,13 +62,19 @@ public class Transaction implements Runnable {
 					state = STATE.ABORT;
 					process.config.logger.warning("Transaction aborted. Not ready for this message.");
 					if(sendAbort) {
+						process.config.logger.info("Received: " + message.toString());
 						Message msg = new Message(process.processId, MessageType.NO, " ");
+						Process.waitTillDelay();
+						process.config.logger.info("Going to send No.");
 						process.controller.sendMsg(process.coordinatorProcessNumber, msg.toString());
 					}
 				} else {
 					// Send coordinator a YES.
 					state = STATE.UNCERTAIN;
+					process.config.logger.info("Received: " + message.toString());
 					Message msg = new Message(process.processId, MessageType.YES, " ");
+					Process.waitTillDelay();
+					process.config.logger.info("Going to send Yes.");
 					process.controller.sendMsg(process.coordinatorProcessNumber, msg.toString());
 					process.config.logger.warning("Update state to UNCERTAIN after sending a YES.");
 					
@@ -81,6 +89,7 @@ public class Transaction implements Runnable {
 							}
 							lock.lock();
 							if (state == STATE.UNCERTAIN) {
+								electCordinator();
 								// RUN TERMINATION PROTOCOL.
 							}
 							lock.unlock();
@@ -90,15 +99,18 @@ public class Transaction implements Runnable {
 				}
 			} else if (state == STATE.UNCERTAIN) {
 				if (message.type == MessageType.ABORT) {
-					state = STATE.COMMIT;
+					state = STATE.ABORT;
 					process.config.logger.info("Transaction aborted. Co-ordinator sent an abort." );
 				}
 				else if (message.type == MessageType.PRE_COMMIT) {
+					process.config.logger.info("Received: " + message.toString());
+					process.config.logger.warning("Updated state to COMMITABLE.");
 					state = STATE.COMMITABLE;
 					
 					Message msg = new Message(process.processId, MessageType.ACK, " ");
+					Process.waitTillDelay();
+					process.config.logger.info("Going to send Acknowledgment.");
 					process.controller.sendMsg(process.coordinatorProcessNumber, msg.toString());
-					process.config.logger.warning("Update state to COMMITABLE after sending ACK.");
 					
 					// Timeout if all the process don't reply back with a Yes or No.
 					Thread th = new Thread() {
@@ -112,6 +124,7 @@ public class Transaction implements Runnable {
 							lock.lock();
 							if (state == STATE.COMMITABLE) {
 								// RUN TERMINATION PROTOCOL.
+								electCordinator();
 							}
 							lock.unlock();
 						}
@@ -122,6 +135,7 @@ public class Transaction implements Runnable {
 							"However, received a: " + message.type);
 				}
 			} else if (state == STATE.COMMITABLE) {
+				process.config.logger.info("Received: " + message.toString());
 				if (message.type == MessageType.COMMIT) {
 					state = STATE.COMMIT;
 					process.config.logger.info("Transaction Committed.");
@@ -142,11 +156,18 @@ public class Transaction implements Runnable {
 		lock.unlock();
 	}
 
+	private void electCordinator() {
+		Integer[] keys = (Integer[]) process.upProcess.keySet().toArray(new Integer[0]);
+		Arrays.sort(keys);
+		
+		System.out.println(this.process.processId + " is electing new coordinator");
+		System.out.println("New coordinator is " + keys[0]);
+	}
+
 	public void update(Message message) {
 		lock.lock();
 		
 		this.message = message;
-		System.out.println("Received: " + this.message);
 		nextMessageArrived.signal();
 		
 		lock.unlock();

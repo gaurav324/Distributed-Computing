@@ -36,6 +36,9 @@ public class CoordinatorTransaction extends Transaction {
 				// If we have come here, it means that we just received a new Transaction request.
 				Message msg = new Message(process.processId, MessageType.VOTE_REQ, command);
 				processWaitSet.addAll(process.upProcess.keySet());
+				process.config.logger.info("Received: " + message.toString());
+				Process.waitTillDelay();
+				process.config.logger.info("Going to send VOTE_REQs.");
 				process.controller.sendMsgs(processWaitSet, msg.toString());
 				
 				// Timeout if all the process don't reply back with a Yes or No.
@@ -47,16 +50,13 @@ public class CoordinatorTransaction extends Transaction {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
-						System.out.println("trying to get the lock.");
 						lock.lock();
 						state = STATE.DECISION_RECEIVED;
 						if (processWaitSet.size() > 0 ) {
 							reasonToAbort = "Did not get a reply from some processes.";
 							abortFlag = true;
 						}
-						System.out.println("Going to signal.");
 						nextMessageArrived.signal();
-						System.out.println("Signal done..");
 						lock.unlock();
 					}
 				};
@@ -64,12 +64,14 @@ public class CoordinatorTransaction extends Transaction {
 			} // End of STATE.RESTING
 			else if (state == STATE.WAIT_DECISION) {
 				if (message.type == MessageType.YES) {
+					process.config.logger.info("Received: " + message.toString());
 					processWaitSet.remove(message.process_id);
 					positiveResponseSet.add(message.process_id);
 					if (processWaitSet.size() == 0) {
 						process.config.logger.info("Successfully got all the YES replies.");
 					}
 				} else if (message.type == MessageType.NO) {
+					process.config.logger.info("Received: " + message.toString());
 					abortFlag = true;
 					processWaitSet.remove(message.process_id);
 					process.config.logger.info("Got a no from " + message.process_id);
@@ -88,6 +90,10 @@ public class CoordinatorTransaction extends Transaction {
 					Message msg = new Message(process.processId, MessageType.PRE_COMMIT, command);
 					processWaitSet = positiveResponseSet;
 					positiveResponseSet = new HashSet<Integer>();
+
+					process.config.logger.info("Received Yes from all the processes");
+					Process.waitTillDelay();
+					process.config.logger.info("Going to send PRE_COMMIT to all the processes.");
 					process.controller.sendMsgs(processWaitSet, msg.toString());
 					
 					// Update your state to waiting for all the decisions to arrive.
@@ -116,6 +122,7 @@ public class CoordinatorTransaction extends Transaction {
 					process.config.logger.warning("Co-ordinator was waiting for Acknowledgement." + 
 							" However got a " + message.type + ".");
 				}
+				process.config.logger.info("Received: " + message.toString());
 				processWaitSet.remove(message.process_id);
 				positiveResponseSet.add(message.process_id);
 				if (processWaitSet.size() == 0) {
@@ -125,7 +132,9 @@ public class CoordinatorTransaction extends Transaction {
 			else if (state == STATE.ACK_RECEIVED) {
 				Message msg = new Message(process.processId, MessageType.COMMIT, command);
 				state = STATE.COMMIT;
-				process.config.logger.info("Co-ordinator has finally committed.");
+				process.config.logger.info("Acknowledgments have been received.");
+				Process.waitTillDelay();
+				process.config.logger.info("Going to send COMMIT message to processes from which received ACK.");
 				process.controller.sendMsgs(positiveResponseSet, msg.toString());
 				positiveResponseSet.clear();
 				processWaitSet.clear();
@@ -156,6 +165,8 @@ public class CoordinatorTransaction extends Transaction {
 		process.config.logger.warning("Transaction aborted: " + reasonToAbort);
 		
 		Message msg = new Message(process.processId, MessageType.ABORT, command);
+		Process.waitTillDelay();
+		process.config.logger.info("Going to send Abort messages to processes which voted Yes.");
 		process.controller.sendMsgs(positiveResponseSet, msg.toString());
 		
 		processWaitSet.clear();
