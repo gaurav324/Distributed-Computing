@@ -78,7 +78,7 @@ public class Transaction implements Runnable {
 					Process.waitTillDelay();
 					process.config.logger.info("Going to send Yes.");
 					process.controller.sendMsg(process.coordinatorProcessNumber, msg.toString());
-					process.config.logger.warning("Update state to UNCERTAIN after sending a YES.");
+					process.config.logger.info("Waiting to receive either PRE_COMMIT or ABORT.");
 					
 					// Timeout if all the process don't reply back with a Yes or No.
 					Thread th = new Thread() {
@@ -91,6 +91,7 @@ public class Transaction implements Runnable {
 							}
 							lock.lock();
 							if (state == STATE.UNCERTAIN) {
+								process.config.logger.warning("Did not receive either PRE_COMMIT or ABORT from coordinator. It must be dead.");
 								electCordinator();
 								// RUN TERMINATION PROTOCOL.
 							}
@@ -164,8 +165,24 @@ public class Transaction implements Runnable {
 		Integer[] keys = (Integer[]) process.upProcess.keySet().toArray(new Integer[0]);
 		Arrays.sort(keys);
 		
-		System.out.println(this.process.processId + " is electing new coordinator");
-		System.out.println("New coordinator is " + keys[0]);
+		if (keys[0] > process.processId) {
+			keys[0] = process.processId;
+		}
+		// If I am not the elected coordinator then update the new coordinator number.
+		// Then send a message to the new coordinator that he is the new coordinator.
+		// I would send the message to myself also, if I am the new coordinator. That way
+		// new coordinator handling would be the same.
+		if (keys[0] != process.processId) {
+			process.coordinatorProcessNumber = keys[0];
+		}
+		
+		process.config.logger.info("Elected new coordinator: " + keys[0]);
+		
+		// Going to send UR_SELECTED message to the new coordinator.
+		Message msg = new Message(process.processId, MessageType.UR_SELECTED, "-");
+		Process.waitTillDelay();
+		process.config.logger.info("Going to send: " + msg);
+		process.controller.sendMsg(keys[0], msg.toString());
 	}
 
 	public void update(Message message) {

@@ -70,7 +70,8 @@ def getopts():
                       help="Location where you have copied the project.")
 
     parser.add_option("--demo",
-                      help="View demo. You have total X demos.")
+                      help="""1. PARTICIPANT FAILURE AND RECOVERY. BEFORE SENDING YES/NO.
+                              2. COORDINATOR FAILURE AND RECOVERY. AFTER SENDING VOTE-REQUEST.""")
 
     opts,args = parser.parse_args()
 
@@ -89,15 +90,18 @@ if __name__ == "__main__":
     import atexit
     atexit.register(killAll, pid_map=proc)
 
+    delay = float(opts.delay)
+
+    # PARTICIPANT FAILURE and RECOVERY.
     if (opts.demo == str(1)):
         print "We would start a transaction and then kill one process (non-coordinator) before sending a YES.\n"
         print "Please monitor logs\n"
 
-        time.sleep(float(opts.delay))
+        time.sleep(delay)
         conn[0].send("11--ADD--tumhiho=http://Aashiqui&");
         
         # Waiting for vote-request to reach.
-        time.sleep(float(opts.delay))
+        time.sleep(delay)
 
         # Extra buffer to ensure the process has received VOTE-REQ.
         time.sleep(1)
@@ -105,6 +109,24 @@ if __name__ == "__main__":
         # Before that responds let us kill that.
         print "Killing Process 1\n"
         proc[1].kill()
+
+    # COORDINATOR FAILURE AND RECOVERY.
+    if (opts.demo == str(2)):
+        print "We would start a transaction and then kill one coordinator after sending VOTE-REQ.\n"
+        print "Please monitor logs\n"
+    
+        time.sleep(delay)
+        conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
+
+        # Waiting for coordinator to dispatch vote-request.
+        time.sleep(delay)
+
+        # Extra buffer to ensure the process has received VOTE-REQ.
+        time.sleep(1)
+
+        # Kill the coordinator.
+        print "Killing the coordinator."
+        proc[0].kill()
     
     from IPython import embed
     embed()

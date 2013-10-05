@@ -198,6 +198,15 @@ public class Process {
 		    					}
 		    					break;
 		    				}
+		    				case UR_SELECTED: {
+		    					if (coordinatorProcessNumber == processId) {
+		    						// Safely ignore this message. I am aware that I am the new coordinator.
+		    						break;
+		    					}
+		    					coordinatorProcessNumber = processId;
+		    					config.logger.info("Yeay !! I am the new coordinator");
+		    					break;
+		    				}
 		    			}
 	        		}
 	        	}
