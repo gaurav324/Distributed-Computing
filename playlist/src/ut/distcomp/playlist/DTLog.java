@@ -11,15 +11,16 @@ public class DTLog {
 	public static final String Log_SEPARATOR = "%%";
 	public static final String UpSet_SEPARATOR = "|";	 // to separate upProcess
 	
-//	String folder;
-//	
-//	DTLog(folder) {
-//		this.folder = folder;
-//	}
+	String folder;//="Process_logs";
+	
+	
+	public DTLog() {
+		this.folder = System.getProperty("DTLOG_FOLDER_NAME");
+	}
 	
 	//Function To write log to the file	
-	public static void WriteToLog(int process_id, String msg, Hashtable<Integer,Long>upProcess) throws IOException {
-		final File Log_folder = new File("Process_logs"); // creates a new folder to store log files
+	public void WriteToLog(int process_id, String msg, Hashtable<Integer,Long>upProcess) throws IOException {
+		final File Log_folder = new File(folder); // creates a new folder to store log files
 	
 		if(!Log_folder.exists()){
 			
@@ -72,8 +73,8 @@ public class DTLog {
 
 	
 	/** functions to read DT Logger**/
-	public static String LastLogMsg(int process_id) throws IOException {
-		final File Log_folder = new File("Process_logs");
+	public String LastLogMsg(int process_id) throws IOException {
+		final File Log_folder = new File(folder);
    	    final File myFile = new File(Log_folder+"/Log_"+process_id+".txt"); //get my file from the log 
         String msg_return=null;
         if(myFile.exists() && myFile.length()!=0){
@@ -96,8 +97,8 @@ public class DTLog {
 	}
 	
 	
-	public static Set<Integer> LastUpProcessSet(int process_id) throws IOException {
-		final File Log_folder = new File("Process_logs");
+	public Set<Integer> LastUpProcessSet(int process_id) throws IOException {
+		final File Log_folder = new File(folder);
    	    final File myFile = new File(Log_folder+"/Log_"+process_id+".txt"); //get my file from the log 
         String upProcess_str=null;
         Set<Integer> up_set = new HashSet<Integer>(); // to return the set of up process
