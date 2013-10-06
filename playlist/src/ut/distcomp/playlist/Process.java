@@ -18,7 +18,7 @@ import ut.distcomp.playlist.TransactionState.*;
 
 public class Process {
 	// Heartbeat pumping time gap in milli seconds. 
-	public static final int HEARTBEAT_PUMP_TIME = 5000;
+	public static final int HEARTBEAT_PUMP_TIME = 1000;
 	
 	// Maintain your own playlist.
 	Hashtable<String, String> playList;
@@ -166,7 +166,8 @@ public class Process {
 		    				}
 		    				case PRE_COMMIT:
 		    				case COMMIT:
-		    				case ABORT: {
+		    				case ABORT: 
+		    				case STATE_REQ: {
 		    					if (coordinatorProcessNumber == processId) {
 		    						config.logger.warning(message.type + " sent by: " + message.process_id);
 		    						config.logger.warning("There is something wrong. Coordiantor is not supposed to get " + message.type);
@@ -183,7 +184,8 @@ public class Process {
 		    				} // End of messages received by the normal process.
 		    				case YES:
 		    				case NO:
-		    				case ACK: {
+		    				case ACK: 
+		    				case STATE_VALUE:{
 		    					if (coordinatorProcessNumber != processId) {
 		    						config.logger.warning(message.type + " sent by: " + message.process_id);
 		    						config.logger.warning("There is something wrong. I am not coorindator. Coordinator should get " + message.type);
@@ -200,11 +202,12 @@ public class Process {
 		    				}
 		    				case UR_SELECTED: {
 		    					if (coordinatorProcessNumber == processId) {
+		    						config.logger.info("Ignoring: " + message.toString());
 		    						// Safely ignore this message. I am aware that I am the new coordinator.
 		    						break;
 		    					}
-		    					coordinatorProcessNumber = processId;
-		    					config.logger.info("Yeay !! I am the new coordinator");
+		    					config.logger.info("Received: " + msg.toString());
+		    					startCoordinatorRecoveryTransaction(message);
 		    					break;
 		    				}
 		    			}
@@ -215,6 +218,18 @@ public class Process {
 	        th.start();
 	}
 	
+	protected void startCoordinatorRecoveryTransaction(Message message) {
+		coordinatorProcessNumber = processId;
+		RecoveryCoordinatorTransaction newTransaction = 
+				new RecoveryCoordinatorTransaction(this, message, activeTransaction.state);
+		activeTransaction.enforceStop();
+		activeTransaction = newTransaction;
+		
+		config.logger.info("Yeay !! I am the new coordinator");
+		Thread thread = new Thread(activeTransaction);
+		thread.start();
+	}
+
 	// Update the list processes.
 	public void updateProcessList(Message message) {
 		if (!upProcess.containsKey(message.process_id)) {

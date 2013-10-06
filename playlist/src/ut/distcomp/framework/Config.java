@@ -50,9 +50,12 @@ public class Config {
 //                b.append("-");
 //                b.append(arg0.getSourceMethodName());
 //                b.append(" ");
-//                b.append("] ");
+//                b.append("] ")
+                b.append("[Thread:");
+                b.append(arg0.getThreadID());
+                b.append("] || ");
                 b.append(arg0.getLevel());
-                b.append("-");
+                b.append(" || ");
                 b.append(arg0.getMessage());
                 b.append(System.getProperty("line.separator"));
                 return b.toString();

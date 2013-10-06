@@ -79,6 +79,7 @@ public class CoordinatorTransaction extends Transaction {
 				} else {
 					process.config.logger.warning("Co-ordinator was waiting for YES/NO." + 
 							" However got a " + message.type + ".");
+					break;
 				}
 				
 			} // End of STATE.WAIT_DECISION.
@@ -121,6 +122,7 @@ public class CoordinatorTransaction extends Transaction {
 				if (message.type != MessageType.ACK) {
 					process.config.logger.warning("Co-ordinator was waiting for Acknowledgement." + 
 							" However got a " + message.type + ".");
+					break;
 				}
 				process.config.logger.info("Received: " + message.toString());
 				processWaitSet.remove(message.process_id);

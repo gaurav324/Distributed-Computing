@@ -26,6 +26,9 @@ public class Transaction implements Runnable {
 	// Next message to be processed.
 	Message message;
 	
+	boolean stateRequestReceived = false;
+	boolean stateRequestResponseReceived = false;
+	
 	// State of the current process. {RESTING, UNCERTAIN, COMMITABLE, COMMIT, ABORT}
 	STATE state = STATE.RESTING;
 	
@@ -69,6 +72,7 @@ public class Transaction implements Runnable {
 						process.config.logger.info("Going to send No.");
 						process.controller.sendMsg(process.coordinatorProcessNumber, msg.toString());
 					}
+					break; // STOP THE LOOP.
 				} else {
 					// Send coordinator a YES.
 					process.dtLogger.write(STATE.UNCERTAIN);
@@ -93,7 +97,6 @@ public class Transaction implements Runnable {
 							if (state == STATE.UNCERTAIN) {
 								process.config.logger.warning("Did not receive either PRE_COMMIT or ABORT from coordinator. It must be dead.");
 								electCordinator();
-								// RUN TERMINATION PROTOCOL.
 							}
 							lock.unlock();
 						}
@@ -102,13 +105,16 @@ public class Transaction implements Runnable {
 				}
 			} else if (state == STATE.UNCERTAIN) {
 				if (message.type == MessageType.ABORT) {
+					stateRequestResponseReceived = true;
 					process.dtLogger.write(STATE.ABORT);
 					state = STATE.ABORT;
 					process.config.logger.info("Transaction aborted. Co-ordinator sent an abort." );
+					break; // STOP THE LOOP
 				}
 				else if (message.type == MessageType.PRE_COMMIT) {
+					stateRequestResponseReceived = true;
 					process.config.logger.info("Received: " + message.toString());
-					process.config.logger.warning("Updated state to COMMITABLE.");
+					process.config.logger.info("Updated state to COMMITABLE.");
 					state = STATE.COMMITABLE;
 					
 					Message msg = new Message(process.processId, MessageType.ACK, " ");
@@ -134,19 +140,24 @@ public class Transaction implements Runnable {
 						}
 					};
 					th.start();
-				} else {
+				}
+				else {
 					process.config.logger.warning("Was expecting either an ABORT or PRE_COMMIT." +
 							"However, received a: " + message.type);
+					break;
 				}
 			} else if (state == STATE.COMMITABLE) {
 				process.config.logger.info("Received: " + message.toString());
 				if (message.type == MessageType.COMMIT) {
+					stateRequestResponseReceived = true;
 					process.dtLogger.write(STATE.COMMIT);
 					state = STATE.COMMIT;
 					process.config.logger.info("Transaction Committed.");
+					break; // STOP THE LOOP
 				} else {
 					process.config.logger.warning("Was expecting only a COMMIT message." +
 							"However, received a: " + message.type);
+					break;
 				}
 			}
 			
@@ -162,34 +173,97 @@ public class Transaction implements Runnable {
 	}
 
 	private void electCordinator() {
+		stateRequestReceived = false;
 		Integer[] keys = (Integer[]) process.upProcess.keySet().toArray(new Integer[0]);
 		Arrays.sort(keys);
 		
 		if (keys[0] > process.processId) {
 			keys[0] = process.processId;
 		}
-		// If I am not the elected coordinator then update the new coordinator number.
-		// Then send a message to the new coordinator that he is the new coordinator.
-		// I would send the message to myself also, if I am the new coordinator. That way
-		// new coordinator handling would be the same.
-		if (keys[0] != process.processId) {
-			process.coordinatorProcessNumber = keys[0];
-		}
 		
 		process.config.logger.info("Elected new coordinator: " + keys[0]);
 		
 		// Going to send UR_SELECTED message to the new coordinator.
-		Message msg = new Message(process.processId, MessageType.UR_SELECTED, "-");
+		// Send a message to the new coordinator that he is the new coordinator.
+		// I would send the message to myself also, if I am the new coordinator.
+		Message msg = new Message(process.processId, MessageType.UR_SELECTED, command);
 		Process.waitTillDelay();
 		process.config.logger.info("Going to send: " + msg);
 		process.controller.sendMsg(keys[0], msg.toString());
+		
+		// If I am not the elected coordinator then update the new coordinator number.
+		if (keys[0] != process.processId) {
+			process.coordinatorProcessNumber = keys[0];
+			
+			// Start waiting for the new STATE_REQ message.
+			Thread th = new Thread() {
+				public void run() {
+					try {
+						Thread.sleep(DECISION_TIMEOUT);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+						if (stateRequestReceived) {
+							lock.lock();
+							electCordinator();
+							lock.unlock();
+						}
+					}
+					
+				}
+			};
+			
+			th.start();
+		}
+	}
+	
+	public void enforceStop() {
+		lock.lock();
+		
+		state = STATE.COMMIT;
+		nextMessageArrived.signal();
+		
+		lock.unlock();
 	}
 
 	public void update(Message message) {
 		lock.lock();
 		
 		this.message = message;
-		nextMessageArrived.signal();
+		if (message.type == MessageType.STATE_REQ) {
+			stateRequestReceived = true;
+			process.coordinatorProcessNumber = message.process_id;
+			process.config.logger.info("Received: " + message.toString());
+			Process.waitTillDelay();
+			if (state == STATE.RESTING) {
+				state = STATE.ABORT;
+			}
+			Message response = new Message(process.processId, MessageType.STATE_VALUE, state.toString());
+			process.config.logger.info("Going to send: " + response.toString());
+			stateRequestResponseReceived = false;
+			process.controller.sendMsg(message.process_id, response.toString());
+			
+			if (state == STATE.UNCERTAIN || state == STATE.COMMITABLE) {
+				Thread th = new Thread() {
+					public void run() {
+						try {
+							Thread.sleep(DECISION_TIMEOUT);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						if (stateRequestResponseReceived == false) {
+							lock.lock();
+							electCordinator();
+							lock.unlock();
+						}
+					}
+				};
+				th.start();
+			}
+		} else {
+			nextMessageArrived.signal();
+		}
 		
 		lock.unlock();
 	}

@@ -19,5 +19,8 @@ public enum MessageType {
 		DELETE,
 		UPDATE,
 		
+		// TERMINATION related messages.
 		UR_SELECTED,
+		STATE_REQ,
+		STATE_VALUE,
 };
