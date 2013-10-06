@@ -22,7 +22,8 @@ public class CoordinatorTransaction extends Transaction {
 		processWaitSet = new HashSet<Integer>();
 		positiveResponseSet = new HashSet<Integer>();
 		
-		this.DECISION_TIMEOUT = process.delay + 2000;
+		this.BUFFER_TIMEOUT = 2000;
+		this.DECISION_TIMEOUT = process.delay + 4000;
 	}
 	
 	@Override

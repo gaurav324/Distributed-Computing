@@ -23,7 +23,8 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 		this.state = state;
 		this.otherState = STATE.RESTING; 
 		
-		this.DECISION_TIMEOUT = process.delay + 2000;
+		this.BUFFER_TIMEOUT = 2000;
+		this.DECISION_TIMEOUT = process.delay + 4000;
 	}
 	
 	public void run() {

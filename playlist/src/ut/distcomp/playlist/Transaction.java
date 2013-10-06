@@ -16,6 +16,7 @@ import ut.distcomp.playlist.TransactionState.STATE;
  */
 public class Transaction implements Runnable {
 	public int DECISION_TIMEOUT;
+	public int BUFFER_TIMEOUT;
 	
 	// Reference to the process starting this transaction.
 	Process process;
@@ -50,7 +51,8 @@ public class Transaction implements Runnable {
 		this.process = process;
 		this.command = message.payLoad;
 		this.message = message;
-		this.DECISION_TIMEOUT = process.delay + 4000;
+		this.BUFFER_TIMEOUT = 4000;
+		this.DECISION_TIMEOUT = process.delay + this.BUFFER_TIMEOUT;
 	}
 	
 	@Override
@@ -248,7 +250,8 @@ public class Transaction implements Runnable {
 				Thread th = new Thread() {
 					public void run() {
 						try {
-							Thread.sleep(DECISION_TIMEOUT);
+							// Increasing this time because Coordinator might have had to send to uncertain process also.
+							Thread.sleep(DECISION_TIMEOUT * 2); 
 						} catch (InterruptedException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
