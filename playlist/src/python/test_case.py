@@ -61,6 +61,9 @@ def start_process(opts, args):
         s.connect(tup)
         process_no_socket_map[no] = s
 
+    import atexit
+    atexit.register(killAll, pid_map=process_no_pid_map)
+
     return (process_no_pid_map, process_no_socket_map)
 
 def getopts():
@@ -93,7 +96,8 @@ def getopts():
                               3. COORDINATOR FAILURE AND RECOVERY. AFTER SENDING PRE-COMMIT.
                               4. CASCADE CO-ORDINATOR FAILURE - 2.
                               5. Partial PreCommit.
-                              6. Partial Commit.""")
+                              6. Partial Commit.
+                           """)
 
     opts,args = parser.parse_args()
 
@@ -105,19 +109,15 @@ def killAll(pid_map):
 
 if __name__ == "__main__":
     opts, args = getopts()
-
-    # A list of processes is here.
-    proc, conn = start_process(opts, args)
-    
-    import atexit
-    atexit.register(killAll, pid_map=proc)
-
     delay = float(opts.delay)
 
     # Normal case. No body dies.
     if (opts.demo == str(0)):
+        
+        # A list of processes is here.
+        proc, conn = start_process(opts, args)
+
         time.sleep(5)
-    
         conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
  
     # PARTICIPANT FAILURE AND RECOVERY. BEFORE SENDING YES/NO.
@@ -125,14 +125,14 @@ if __name__ == "__main__":
         print "We would start a transaction and then kill one process (non-coordinator) before sending a YES.\n"
         print "Please monitor logs\n"
 
-        time.sleep(delay)
+        # A list of processes is here.
+        proc, conn = start_process(opts, args)
+ 
+        time.sleep(5)
         conn[0].send("11--ADD--tumhiho=http://Aashiqui&");
         
         # Waiting for vote-request to reach.
         time.sleep(delay)
-
-        # Extra buffer to ensure the process has received VOTE-REQ.
-        time.sleep(1)
 
         # Before that responds let us kill that.
         print "Killing Process 1\n"
@@ -143,15 +143,15 @@ if __name__ == "__main__":
         print "We would start a transaction and then kill one coordinator after sending VOTE-REQ."
         print "Please monitor logs"
     
-        time.sleep(delay)
+        # A list of processes is here.
+        proc, conn = start_process(opts, args)
+ 
+        time.sleep(5)
         conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
 
         # Waiting for coordinator to dispatch vote-request.
-        time.sleep(delay)
-
-        # Extra buffer to ensure the process has received VOTE-REQ.
-        time.sleep(1)
-
+        time.sleep(delay + 1)
+        
         # Kill the coordinator.
         print "Killing the coordinator."
         proc[0].kill()
@@ -161,20 +161,20 @@ if __name__ == "__main__":
         print "We would start a transaction and then kill one coordinator after sending PRE_COMMIT"
         print "Please monitor logs\n"
     
-        time.sleep(delay)
+        # A list of processes is here.
+        proc, conn = start_process(opts, args)
+ 
+        time.sleep(5)
         conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
 
         # Waiting for coordinator to dispatch vote-request.
-        time.sleep(delay)
-
-        # Extra buffer to ensure the process has received VOTE-REQ.
-        time.sleep(1)
+        time.sleep(delay + 0.5)
 
         # Waiting to send YES/NO message.
-        time.sleep(delay)
+        time.sleep(delay + 0.5)
 
         # Waiting until normal process time-out on pre-commit/abort message.
-        time.sleep(delay + 4)
+        time.sleep(delay + 2)
 
         # Kill the coordinator.
         print "Killing the coordinator."
@@ -185,14 +185,14 @@ if __name__ == "__main__":
         print "We would start a transaction and then kill two coordinators one after the another.\n"
         print "Please monitor logs\n"
 
-        time.sleep(delay)
+        # A list of processes is here.
+        proc, conn = start_process(opts, args)
+ 
+        time.sleep(5)
         conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
 
         # Waiting for coordinator to dispatch vote-request.
         time.sleep(delay)
-
-        # Extra buffer to ensure the process has received VOTE-REQ.
-        time.sleep(1)
 
         # Kill the coordinator.
         print "Killing the coordinator."
@@ -202,7 +202,7 @@ if __name__ == "__main__":
         time.sleep(delay)
 
         # Waiting until normal process time-out on pre-commit/abort message.
-        time.sleep(delay + 4)
+        time.sleep(delay + 2)
 
         # Someone would elect a new co-ordinator and inform him. Would wait so that it dispatches # the UR_SELECTED message.
         time.sleep(delay)
@@ -210,6 +210,30 @@ if __name__ == "__main__":
         # Before new coordinator sends the state request.
         print "Killing the new coordinator."
         proc[1].kill()
-   
+
+    if (opts.demo == str(5)):
+        print "Coordinator would crash after partial pre-commit of 1 message."
+        print "Please monitor logs."
+
+        opts.partial_pre_commit = 1
+           
+        # A list of processes is here.
+        proc, conn = start_process(opts, args)
+
+        time.sleep(5)
+        conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
+        
+    if (opts.demo == str(6)):
+        print "Coordinator would crash after partial commit of 1 message."
+        print "Please monitor logs."
+
+        opts.partial_commit = 1
+           
+        # A list of processes is here.
+        proc, conn = start_process(opts, args)
+
+        time.sleep(5)
+        conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
+
     from IPython import embed
     embed()
