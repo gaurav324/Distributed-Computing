@@ -188,7 +188,7 @@ public class Transaction implements Runnable {
 		// I would send the message to myself also, if I am the new coordinator.
 		Message msg = new Message(process.processId, MessageType.UR_SELECTED, command);
 		Process.waitTillDelay();
-		process.config.logger.info("Going to send: " + msg);
+		process.config.logger.info("Going to send: " + msg + " to: " + keys[0]);
 		process.controller.sendMsg(keys[0], msg.toString());
 		
 		// If I am not the elected coordinator then update the new coordinator number.
@@ -203,13 +203,13 @@ public class Transaction implements Runnable {
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
-						if (stateRequestReceived) {
-							lock.lock();
-							electCordinator();
-							lock.unlock();
-						}
 					}
-					
+					if (!stateRequestReceived) {
+						lock.lock();
+						process.config.logger.info("Going to reelect the cordinator because did not get any state Request.");
+						electCordinator();
+						lock.unlock();
+					}
 				}
 			};
 			
@@ -254,6 +254,7 @@ public class Transaction implements Runnable {
 						}
 						if (stateRequestResponseReceived == false) {
 							lock.lock();
+							process.config.logger.info("Going to reelect the cordinator because no response is received after sending STATE.");
 							electCordinator();
 							lock.unlock();
 						}

@@ -13,6 +13,7 @@ package ut.distcomp.framework;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -53,7 +54,27 @@ public class NetController {
 	}
 	
 	public synchronized void sendMsgs(Set<Integer> processes, String msg) {
+		int i = 0;
+		boolean is_partial = false;
+//		if (System.getProperty("PartialPreCommit") == "1" || System.getProperty("PartialCommit") == "1") {
+//			is_partial = true;
+//		}
+		
 		for(Integer processNo: processes) {
+//			++i;
+//			if (i > 1 && is_partial) {
+//				try {
+//					OutgoingSock py_sock = new OutgoingSock(new Socket("localhost", 5000));
+//					py_sock.sendMsg(this.config.procNum + "");
+//					py_sock.cleanShutdown();
+//				} catch (UnknownHostException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				} catch (IOException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//			}
 			config.logger.info("Sending: " + msg + " to " + processNo);
 			sendMsg(processNo, msg);
 		}

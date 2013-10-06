@@ -7,7 +7,7 @@ import time
 
 from optparse import OptionParser
 
-execute_command = """java -classpath %(root)s/playlist/src:%(root)s/playlist/bin -DCONFIG_NAME="%(root)s/playlist/src/config.properties" -DLOG_FOLDER="/tmp" -DDELAY="%(delay)s" ut.distcomp.playlist.Process %(process_no)s
+execute_command = """java -classpath %(root)s/playlist/src:%(root)s/playlist/bin -DCONFIG_NAME="%(root)s/playlist/src/config.properties" -DLOG_FOLDER="/tmp" -DDELAY="%(delay)s" -DPartialPreCommit"1" ut.distcomp.playlist.Process %(process_no)s
 """
 
 def start_process(opts, args):
@@ -71,7 +71,8 @@ def getopts():
 
     parser.add_option("--demo",
                       help="""1. PARTICIPANT FAILURE AND RECOVERY. BEFORE SENDING YES/NO.
-                              2. COORDINATOR FAILURE AND RECOVERY. AFTER SENDING VOTE-REQUEST.""")
+                              2. COORDINATOR FAILURE AND RECOVERY. AFTER SENDING VOTE-REQUEST.
+                              3. CASCADE COORDINATOR FAILURE.""")
 
     opts,args = parser.parse_args()
 
@@ -80,6 +81,18 @@ def getopts():
 def killAll(pid_map):
     for pid, proc in pid_map.iteritems():
         proc.kill()
+
+def start_listening():
+    port = 4500
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('0.0.0.0', port))
+    
+    while 1:
+        client, address = s.accept()
+        data = client.recv(1024)
+        client.close()
+        break
+    return data
 
 if __name__ == "__main__":
     opts, args = getopts()
@@ -127,6 +140,37 @@ if __name__ == "__main__":
         # Kill the coordinator.
         print "Killing the coordinator."
         proc[0].kill()
+
+    if (opts.demo == str(3)):
+       print "We would start a transaction and then kill two coordinators after sending VOTE-REQ.\n"
+       print "Please monitor logs\n"
+
+       time.sleep(delay)
+       conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
+
+       # Waiting for coordinator to dispatch vote-request.
+       time.sleep(delay)
+
+       # Extra buffer to ensure the process has received VOTE-REQ.
+       time.sleep(1)
+
+       # Kill the coordinator.
+       print "Killing the coordinator."
+       proc[0].kill()
+
+       # Waiting until normal process time-out on pre-commit/abort message.
+       time.sleep(delay + 1)
+
+       # Someone would elect a new co-ordinator and inform him. Would wait so that it dispatches         # the UR_SELECTED message.
+       time.sleep(delay)
+
+       # Before new coordinator sends the state request.
+       proc[1].kill()
     
+    
+    # Open a port to listen.
+    data = start_listening()
+    print data
+
     from IPython import embed
     embed()
