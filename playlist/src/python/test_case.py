@@ -168,10 +168,10 @@ if __name__ == "__main__":
         conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
 
         # Waiting for coordinator to dispatch vote-request.
-        time.sleep(delay + 0.5)
+        time.sleep(delay + 1)
 
         # Waiting to send YES/NO message.
-        time.sleep(delay + 0.5)
+        time.sleep(delay + 1)
 
         # Waiting until normal process time-out on pre-commit/abort message.
         time.sleep(delay + 2)
@@ -192,20 +192,20 @@ if __name__ == "__main__":
         conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
 
         # Waiting for coordinator to dispatch vote-request.
-        time.sleep(delay)
+        time.sleep(delay + 1)
 
         # Kill the coordinator.
         print "Killing the coordinator."
         proc[0].kill()
 
         # Waiting to send YES/NO message.
-        time.sleep(delay)
+        time.sleep(delay + 1)
 
         # Waiting until normal process time-out on pre-commit/abort message.
         time.sleep(delay + 2)
 
         # Someone would elect a new co-ordinator and inform him. Would wait so that it dispatches # the UR_SELECTED message.
-        time.sleep(delay)
+        time.sleep(delay + 1)
 
         # Before new coordinator sends the state request.
         print "Killing the new coordinator."
