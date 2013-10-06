@@ -7,7 +7,7 @@ import time
 
 from optparse import OptionParser
 
-execute_command = """java -classpath %(root)s/playlist/src:%(root)s/playlist/bin -DCONFIG_NAME="%(root)s/playlist/src/config.properties" -DLOG_FOLDER="/tmp" -DDELAY="%(delay)s" -DPartialPreCommit"1" ut.distcomp.playlist.Process %(process_no)s
+execute_command = """java -classpath %(root)s/playlist/src:%(root)s/playlist/bin -DCONFIG_NAME="%(root)s/playlist/src/config.properties" -DLOG_FOLDER="/tmp" -DDELAY="%(delay)s" -DPartialPreCommit="1" ut.distcomp.playlist.Process %(process_no)s
 """
 
 def start_process(opts, args):
@@ -83,9 +83,10 @@ def killAll(pid_map):
         proc.kill()
 
 def start_listening():
-    port = 4500
+    port = 5000
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(('0.0.0.0', port))
+    s.bind(('localhost', port))
+    s.listen(5)
     
     while 1:
         client, address = s.accept()
@@ -166,11 +167,15 @@ if __name__ == "__main__":
 
        # Before new coordinator sends the state request.
        proc[1].kill()
+   
+
+    #time.sleep(5)
     
-    
+    #conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
+ 
     # Open a port to listen.
-    data = start_listening()
-    print data
+    #data = start_listening()
+    #print data
 
     from IPython import embed
     embed()
