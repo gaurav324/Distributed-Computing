@@ -127,7 +127,7 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 					break;
 				} else {
 					otherState = STATE.WAIT_ACK; 
-					process.config.logger.info("Some process are uncertain and some are committable.");
+					process.config.logger.info("Some process may be uncertain and some are committable.");
 					Process.waitTillDelay();
 					state = STATE.COMMITABLE;
 					Message msg = new Message(process.processId, MessageType.PRE_COMMIT, command);
@@ -152,6 +152,7 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 							lock.unlock();
 						}
 					};
+					th.start();
 				}
 			} else if (otherState == STATE.WAIT_ACK) {
 				if (message.type == MessageType.ACK) {
@@ -162,7 +163,7 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 					process.config.logger.warning("Was expecting a ACK and got: " + message.toString());
 					break;
 				}
-			} else if (otherState == STATE.DECISION_RECEIVED) {
+			} else if (otherState == STATE.ACK_RECEIVED) {
 				process.config.logger.info("Let us COMMIT !!");
 				process.dtLogger.write(STATE.COMMIT);
 				state = STATE.COMMIT;
