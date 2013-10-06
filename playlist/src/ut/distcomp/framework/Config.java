@@ -51,6 +51,8 @@ public class Config {
 //                b.append(arg0.getSourceMethodName());
 //                b.append(" ");
 //                b.append("] ")
+                b.append(arg0.getMillis() / 1000);
+                b.append(" || ");
                 b.append("[Thread:");
                 b.append(arg0.getThreadID());
                 b.append("] || ");

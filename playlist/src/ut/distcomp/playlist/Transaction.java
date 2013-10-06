@@ -15,7 +15,7 @@ import ut.distcomp.playlist.TransactionState.STATE;
  *
  */
 public class Transaction implements Runnable {
-	public int DECISION_TIMEOUT = 2000;
+	public int DECISION_TIMEOUT;
 	
 	// Reference to the process starting this transaction.
 	Process process;
@@ -50,7 +50,7 @@ public class Transaction implements Runnable {
 		this.process = process;
 		this.command = message.payLoad;
 		this.message = message;
-		this.DECISION_TIMEOUT = DECISION_TIMEOUT + process.delay;
+		this.DECISION_TIMEOUT = process.delay + 4000;
 	}
 	
 	@Override
@@ -69,7 +69,7 @@ public class Transaction implements Runnable {
 						process.config.logger.info("Received: " + message.toString());
 						Message msg = new Message(process.processId, MessageType.NO, " ");
 						Process.waitTillDelay();
-						process.config.logger.info("Going to send No.");
+						process.config.logger.info("Sending No.");
 						process.controller.sendMsg(process.coordinatorProcessNumber, msg.toString());
 					}
 					break; // STOP THE LOOP.
@@ -80,7 +80,7 @@ public class Transaction implements Runnable {
 					process.config.logger.info("Received: " + message.toString());
 					Message msg = new Message(process.processId, MessageType.YES, " ");
 					Process.waitTillDelay();
-					process.config.logger.info("Going to send Yes.");
+					process.config.logger.info("Sending Yes.");
 					process.controller.sendMsg(process.coordinatorProcessNumber, msg.toString());
 					process.config.logger.info("Waiting to receive either PRE_COMMIT or ABORT.");
 					
@@ -119,7 +119,7 @@ public class Transaction implements Runnable {
 					
 					Message msg = new Message(process.processId, MessageType.ACK, " ");
 					Process.waitTillDelay();
-					process.config.logger.info("Going to send Acknowledgment.");
+					process.config.logger.info("Sending Acknowledgment.");
 					process.controller.sendMsg(process.coordinatorProcessNumber, msg.toString());
 					
 					// Timeout if all the process don't reply back with a Yes or No.
@@ -134,6 +134,7 @@ public class Transaction implements Runnable {
 							lock.lock();
 							if (state == STATE.COMMITABLE) {
 								// RUN TERMINATION PROTOCOL.
+								process.config.logger.warning("Did not receive COMMIT from the coordinator. It must be dead.");
 								electCordinator();
 							}
 							lock.unlock();
@@ -183,12 +184,12 @@ public class Transaction implements Runnable {
 		
 		process.config.logger.info("Elected new coordinator: " + keys[0]);
 		
-		// Going to send UR_SELECTED message to the new coordinator.
+		// Sending UR_SELECTED message to the new coordinator.
 		// Send a message to the new coordinator that he is the new coordinator.
 		// I would send the message to myself also, if I am the new coordinator.
 		Message msg = new Message(process.processId, MessageType.UR_SELECTED, command);
 		Process.waitTillDelay();
-		process.config.logger.info("Going to send: " + msg + " to: " + keys[0]);
+		process.config.logger.info("Sending: " + msg + " to: " + keys[0]);
 		process.controller.sendMsg(keys[0], msg.toString());
 		
 		// If I am not the elected coordinator then update the new coordinator number.
@@ -239,7 +240,7 @@ public class Transaction implements Runnable {
 				state = STATE.ABORT;
 			}
 			Message response = new Message(process.processId, MessageType.STATE_VALUE, state.toString());
-			process.config.logger.info("Going to send: " + response.toString());
+			process.config.logger.info("Sending: " + response.toString());
 			stateRequestResponseReceived = false;
 			process.controller.sendMsg(message.process_id, response.toString());
 			

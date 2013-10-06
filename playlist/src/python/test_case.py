@@ -7,7 +7,7 @@ import time
 
 from optparse import OptionParser
 
-execute_command = """java -classpath %(root)s/playlist/src:%(root)s/playlist/bin -DCONFIG_NAME="%(root)s/playlist/src/config.properties" -DLOG_FOLDER="/tmp" -DDELAY="%(delay)s" -DPartialPreCommit="1" ut.distcomp.playlist.Process %(process_no)s
+execute_command = """java -classpath %(root)s/playlist/src:%(root)s/playlist/bin -DCONFIG_NAME="%(root)s/playlist/src/config.properties" -DLOG_FOLDER="/tmp" -DDELAY="%(delay)s" -DPartialPreCommit="%(partial_pre_commit)s" -DPartialCommit="%(partial_commit)s" ut.distcomp.playlist.Process %(process_no)s
 """
 
 def start_process(opts, args):
@@ -36,10 +36,18 @@ def start_process(opts, args):
 
     # A map from process number to process Id.
     process_no_pid_map = {}
+    partial_pre_commit = opts.partial_pre_commit 
+    partial_commit = opts.partial_commit
     for proc_no in range(proc_count):
+        if (proc_no != 0):
+            partial_pre_commit = -1
+            partial_commit = -1
+
         command = execute_command % {'root' : opts.root, 
                                      'process_no' : proc_no,
-                                     'delay' : str(int(opts.delay) * 1000)
+                                     'delay' : str(int(opts.delay) * 1000),
+                                     'partial_pre_commit' : partial_pre_commit,
+                                     'partial_commit' : partial_commit,
                                     }
         print "Going to execute: ", command
         args = shlex.split(command)
@@ -69,10 +77,23 @@ def getopts():
     parser.add_option("--root",
                       help="Location where you have copied the project.")
 
+    parser.add_option("--partial_pre_commit",
+                      help="This would kill the first coordinator after sending first X pre_commits.",
+                      default=-1
+                     )
+
+    parser.add_option("--partial_commit",
+                      help="This would kill the first coordinator after the first X commits.",
+                      default=-1
+                     )
     parser.add_option("--demo",
-                      help="""1. PARTICIPANT FAILURE AND RECOVERY. BEFORE SENDING YES/NO.
+                      help="""0. Everything worlks fine.
+                              1. PARTICIPANT FAILURE AND RECOVERY. BEFORE SENDING YES/NO.
                               2. COORDINATOR FAILURE AND RECOVERY. AFTER SENDING VOTE-REQUEST.
-                              3. CASCADE COORDINATOR FAILURE.""")
+                              3. COORDINATOR FAILURE AND RECOVERY. AFTER SENDING PRE-COMMIT.
+                              4. CASCADE CO-ORDINATOR FAILURE - 2.
+                              5. Partial PreCommit.
+                              6. Partial Commit.""")
 
     opts,args = parser.parse_args()
 
@@ -81,19 +102,6 @@ def getopts():
 def killAll(pid_map):
     for pid, proc in pid_map.iteritems():
         proc.kill()
-
-def start_listening():
-    port = 5000
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(('localhost', port))
-    s.listen(5)
-    
-    while 1:
-        client, address = s.accept()
-        data = client.recv(1024)
-        client.close()
-        break
-    return data
 
 if __name__ == "__main__":
     opts, args = getopts()
@@ -106,7 +114,13 @@ if __name__ == "__main__":
 
     delay = float(opts.delay)
 
-    # PARTICIPANT FAILURE and RECOVERY.
+    # Normal case. No body dies.
+    if (opts.demo == str(0)):
+        time.sleep(5)
+    
+        conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
+ 
+    # PARTICIPANT FAILURE AND RECOVERY. BEFORE SENDING YES/NO.
     if (opts.demo == str(1)):
         print "We would start a transaction and then kill one process (non-coordinator) before sending a YES.\n"
         print "Please monitor logs\n"
@@ -124,10 +138,10 @@ if __name__ == "__main__":
         print "Killing Process 1\n"
         proc[1].kill()
 
-    # COORDINATOR FAILURE AND RECOVERY.
+    # COORDINATOR FAILURE AND RECOVERY. AFTER SENDING VOTE-REQUEST.
     if (opts.demo == str(2)):
-        print "We would start a transaction and then kill one coordinator after sending VOTE-REQ.\n"
-        print "Please monitor logs\n"
+        print "We would start a transaction and then kill one coordinator after sending VOTE-REQ."
+        print "Please monitor logs"
     
         time.sleep(delay)
         conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
@@ -142,40 +156,60 @@ if __name__ == "__main__":
         print "Killing the coordinator."
         proc[0].kill()
 
+    # COORDINATOR FAILURE AND RECOVERY. AFTER SENDING PRE-COMMIT.
     if (opts.demo == str(3)):
-       print "We would start a transaction and then kill two coordinators after sending VOTE-REQ.\n"
-       print "Please monitor logs\n"
-
-       time.sleep(delay)
-       conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
-
-       # Waiting for coordinator to dispatch vote-request.
-       time.sleep(delay)
-
-       # Extra buffer to ensure the process has received VOTE-REQ.
-       time.sleep(1)
-
-       # Kill the coordinator.
-       print "Killing the coordinator."
-       proc[0].kill()
-
-       # Waiting until normal process time-out on pre-commit/abort message.
-       time.sleep(delay + 1)
-
-       # Someone would elect a new co-ordinator and inform him. Would wait so that it dispatches         # the UR_SELECTED message.
-       time.sleep(delay)
-
-       # Before new coordinator sends the state request.
-       proc[1].kill()
-   
-
-    #time.sleep(5)
+        print "We would start a transaction and then kill one coordinator after sending PRE_COMMIT"
+        print "Please monitor logs\n"
     
-    #conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
- 
-    # Open a port to listen.
-    #data = start_listening()
-    #print data
+        time.sleep(delay)
+        conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
 
+        # Waiting for coordinator to dispatch vote-request.
+        time.sleep(delay)
+
+        # Extra buffer to ensure the process has received VOTE-REQ.
+        time.sleep(1)
+
+        # Waiting to send YES/NO message.
+        time.sleep(delay)
+
+        # Waiting until normal process time-out on pre-commit/abort message.
+        time.sleep(delay + 4)
+
+        # Kill the coordinator.
+        print "Killing the coordinator."
+        proc[0].kill()
+
+
+    if (opts.demo == str(4)):
+        print "We would start a transaction and then kill two coordinators one after the another.\n"
+        print "Please monitor logs\n"
+
+        time.sleep(delay)
+        conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
+
+        # Waiting for coordinator to dispatch vote-request.
+        time.sleep(delay)
+
+        # Extra buffer to ensure the process has received VOTE-REQ.
+        time.sleep(1)
+
+        # Kill the coordinator.
+        print "Killing the coordinator."
+        proc[0].kill()
+
+        # Waiting to send YES/NO message.
+        time.sleep(delay)
+
+        # Waiting until normal process time-out on pre-commit/abort message.
+        time.sleep(delay + 4)
+
+        # Someone would elect a new co-ordinator and inform him. Would wait so that it dispatches # the UR_SELECTED message.
+        time.sleep(delay)
+
+        # Before new coordinator sends the state request.
+        print "Killing the new coordinator."
+        proc[1].kill()
+   
     from IPython import embed
     embed()

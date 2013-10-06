@@ -53,30 +53,16 @@ public class NetController {
 				config.procNum, proc));
 	}
 	
-	public synchronized void sendMsgs(Set<Integer> processes, String msg) {
+	public synchronized void sendMsgs(Set<Integer> processes, String msg, int partial_count) {
 		int i = 0;
-		boolean is_partial = false;
-//		if (System.getProperty("PartialPreCommit") == "1" || System.getProperty("PartialCommit") == "1") {
-//			is_partial = true;
-//		}
-		
 		for(Integer processNo: processes) {
-//			++i;
-//			if (i > 1 && is_partial) {
-//				try {
-//					OutgoingSock py_sock = new OutgoingSock(new Socket("localhost", 5000));
-//					py_sock.sendMsg(this.config.procNum + "");
-//					py_sock.cleanShutdown();
-//				} catch (UnknownHostException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				} catch (IOException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-//			}
+			if (partial_count != -1 && i >= partial_count) {
+				config.logger.warning("Killing myself.");
+				System.exit(1);
+			}
 			config.logger.info("Sending: " + msg + " to " + processNo);
 			sendMsg(processNo, msg);
+			i++;
 		}
 	}
 	

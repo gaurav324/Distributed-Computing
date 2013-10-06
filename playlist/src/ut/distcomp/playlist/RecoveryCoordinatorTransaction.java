@@ -22,6 +22,8 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 		super(process, message);
 		this.state = state;
 		this.otherState = STATE.RESTING; 
+		
+		this.DECISION_TIMEOUT = process.delay + 2000;
 	}
 	
 	public void run() {
@@ -34,8 +36,8 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 				// We have reached here, means we have to send STATE-REQS to all the active machines.
 				Message msg = new Message(process.processId, MessageType.STATE_REQ, command);
 				Process.waitTillDelay();
-				process.config.logger.info("Going to send: " + msg);
-				process.controller.sendMsgs(process.upProcess.keySet(), msg.toString());
+				process.config.logger.info("Sending: " + msg);
+				process.controller.sendMsgs(process.upProcess.keySet(), msg.toString(), -1);
 				
 				Thread th = new Thread() {
 					public void run() {
@@ -93,8 +95,13 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 					Process.waitTillDelay();
 					isRecoveryComplete = true;
 					Message msg = new Message(process.processId, MessageType.COMMIT, command);
-					process.config.logger.info("Sending COMMIT to all the active processes.");
-					process.controller.sendMsgs(process.upProcess.keySet(), msg.toString());
+					process.config.logger.info("Sending COMMIT to all the active processes.");					
+					
+					int partial_count = -1;
+					if (!System.getProperty("PartialCommit").equals("-1")) {
+						partial_count = Integer.parseInt(System.getProperty("PartialCommit"));
+					}
+					process.controller.sendMsgs(process.upProcess.keySet(), msg.toString(), partial_count);
 					break;
 				} else if (abortFlag) {
 					process.config.logger.info("Some process has already aborted. Let us all abort.");
@@ -106,7 +113,7 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 					isRecoveryComplete = true;
 					Message msg = new Message(process.processId, MessageType.ABORT, command);
 					process.config.logger.info("Sending ABORT to all the active processes.");
-					process.controller.sendMsgs(process.upProcess.keySet(), msg.toString());
+					process.controller.sendMsgs(process.upProcess.keySet(), msg.toString(), -1);
 					break;
 				} else if (committableSet.size() == 0) {
 					process.config.logger.info("All the process are uncertain. Let us all abort.");
@@ -116,7 +123,7 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 					isRecoveryComplete = true;
 					Message msg = new Message(process.processId, MessageType.ABORT, command);
 					process.config.logger.info("Sending ABORT to all the active processes.");
-					process.controller.sendMsgs(process.upProcess.keySet(), msg.toString());
+					process.controller.sendMsgs(process.upProcess.keySet(), msg.toString(), -1);
 					break;
 				} else {
 					otherState = STATE.WAIT_ACK; 
@@ -125,7 +132,12 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 					state = STATE.COMMITABLE;
 					Message msg = new Message(process.processId, MessageType.PRE_COMMIT, command);
 					process.config.logger.info("Sending PRE_COMMIT to uncertain processes.");
-					process.controller.sendMsgs(uncertainSet, msg.toString());
+							
+					int partial_count = -1;
+					if (!System.getProperty("PartialCommit").equals("-1")) {
+						partial_count = Integer.parseInt(System.getProperty("PartialCommit"));
+					}
+					process.controller.sendMsgs(uncertainSet, msg.toString(), partial_count);
 					
 					Thread th = new Thread() {
 						public void run() {
@@ -156,8 +168,15 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 				state = STATE.COMMIT;
 				isRecoveryComplete = true;
 				Message msg = new Message(process.processId, MessageType.COMMIT, command);
+				Process.waitTillDelay();
 				process.config.logger.info("Sending COMMIT to all the active processes.");
-				process.controller.sendMsgs(process.upProcess.keySet(), msg.toString());
+				
+				int partial_count = -1;
+				if (!System.getProperty("PartialCommit").equals("-1")) {
+					partial_count = Integer.parseInt(System.getProperty("PartialCommit"));
+				}
+				
+				process.controller.sendMsgs(process.upProcess.keySet(), msg.toString(), partial_count);
 				break;
 			}
 			try {
