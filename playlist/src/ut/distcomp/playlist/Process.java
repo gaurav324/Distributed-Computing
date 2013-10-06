@@ -2,6 +2,7 @@ package ut.distcomp.playlist;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
@@ -18,10 +19,10 @@ import ut.distcomp.playlist.TransactionState.*;
 
 public class Process {
 	// Heartbeat pumping time gap in milli seconds. 
-	public static final int HEARTBEAT_PUMP_TIME = 1000;
+	public static final int HEARTBEAT_PUMP_TIME = 500;
 	
 	// Maintain your own playlist.
-	Hashtable<String, String> playList;
+	Hashtable<String, String> playList = new Hashtable<String, String>();
 	
 	// Current process Id.
 	int processId;
@@ -87,6 +88,9 @@ public class Process {
 		// Start sending HeartBeats.
 		me.pumpHeartBeat();
 		
+		// Check for recovery.
+		me.checkForRecovery();
+		
 		// Start receiving messages from other process.
 		me.startReceivingMessages();
 		
@@ -96,15 +100,49 @@ public class Process {
 			
 	}
 	
+	// Returns a flag telling whether in process of recovering or not.
+	private boolean checkForRecovery() {
+		STATE state = this.dtLogger.getLoggedState(this.processId);
+		
+		if (state == null) {
+			config.logger.info("Got nothing from the DT log file.");
+		} else if (state == STATE.COMMIT || state == STATE.ABORT) {
+			config.logger.info("Transaction completed properly last time.");
+		} else if (state == STATE.RESTING) {
+			String command = this.dtLogger.getLoggedCommand(this.processId);
+			config.logger.info("Aborting last transaction as I did not took part.");
+			this.dtLogger.write(STATE.ABORT, command);
+		} else { // When this process is in the uncertain stage.
+			String command = this.dtLogger.getLoggedCommand(this.processId);
+			
+			MessageType type;
+			if (command.contains("=")) {
+				type = MessageType.UPDATE;
+			} else {
+				type  = MessageType.DELETE;
+			}
+			
+			Message msg = new Message(-1, type, command);
+			config.logger.info("DTlog: UNCERTAIN. Going to start recovery transaction.");
+			activeTransaction = new RecoveryTransaction(this, msg);
+			
+			Thread thread = new Thread(activeTransaction);
+			thread.start();
+			
+			return true;
+		}
+		
+		return false;
+	}
+
 	public void pumpHeartBeat() {
 		final Message heartBeat = new Message(this.processId, MessageType.HEARTBEAT, " ");
 		 
         Thread th = new Thread() {
         	public void run() {
-        		// XXXX
-        		// Wait for 5 seconds initially to let everyone come up.
+        		// Wait for 2 seconds initially to let everyone come up.
         		try {
-					Thread.sleep(5000);
+					Thread.sleep(2000);
 				} catch (InterruptedException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
@@ -206,10 +244,64 @@ public class Process {
 		    						// Safely ignore this message. I am aware that I am the new coordinator.
 		    						break;
 		    					}
-		    					config.logger.info("Received: " + msg.toString());
+		    					config.logger.info("Received: " + message.toString());
 		    					startCoordinatorRecoveryTransaction(message);
 		    					break;
 		    				}
+		    				case STATE_ENQUIRY: {
+		    					config.logger.info("Received: " + message.toString());
+		    					MessageType type;
+		    					if (activeTransaction == null) {
+		    						break;
+		    					}
+		    					if (activeTransaction.state == STATE.COMMIT) {
+		    						type = MessageType.STATE_COMMIT;
+		    					} else if (activeTransaction.state == STATE.ABORT) {
+		    						type = MessageType.STATE_ABORT;
+		    					} else if (activeTransaction.state == STATE.RECOVERING) {
+		    						type = MessageType.STATE_RECOVERING;
+		    					} else {
+		    						type = MessageType.STATE_UNDECIDED;
+		    					}
+		    					Message stateReply = new Message(processId, type, activeTransaction.command);
+		    					config.logger.info("Sending: " + stateReply.toString() + " to: " + message.process_id);
+		    					controller.sendMsg(message.process_id, stateReply.toString());
+		    					break;
+		    				}
+		    				case STATE_COMMIT:
+		    				case STATE_ABORT:
+		    				case STATE_RECOVERING:
+		    				case STATE_UNDECIDED: {
+		    					config.logger.info("Received: " + message.toString());
+		    					if (activeTransaction != null) {
+	    							activeTransaction.update(message);
+	    						} else {
+	    							config.logger.warning(message.type + " sent by: " + message.process_id);
+		    						config.logger.warning("I should not get a " +  message.type + " if transaction is not running.");
+	    						}
+		    					break;
+		    				}
+		    				case PRINT_STATE: {
+		    					if(activeTransaction==null)
+		    					{
+		    						System.out.println("Transaction not started yet.");
+		    					} else {
+		    						System.out.println("STATE is "+ activeTransaction.state);
+		    					}
+
+		    					System.out.println("Current Playlist contains:.");
+		    					Enumeration<String> songs = playList.keys();
+		    					if(songs.hasMoreElements()) {
+			    					while(songs.hasMoreElements())
+			    					{
+				    					String str = (String)songs.nextElement();
+				    					System.out.println(str + " : " + playList.get(str));
+			    					} 
+		    					} else{
+		    						System.out.println("No Songs");
+		    					}
+		    					}
+		    				break;
 		    			}
 	        		}
 	        	}
@@ -252,7 +344,7 @@ public class Process {
 	        		for (Iterator<Map.Entry<Integer, Long>> i = upProcess.entrySet().iterator(); i.hasNext(); ) {
 	        	        Map.Entry<Integer, Long> entry = i.next();
 	        	        
-	        	        if (System.currentTimeMillis() - entry.getValue() > (HEARTBEAT_PUMP_TIME + 500)) {
+	        	        if (System.currentTimeMillis() - entry.getValue() > (HEARTBEAT_PUMP_TIME + 200)) {
 	        	            i.remove();
 	        	            //config.logger.warning(String.format("Process %d seems to dead. Clearing from up list.", entry.getKey()));
 	        	        }

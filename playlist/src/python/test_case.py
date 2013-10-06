@@ -10,12 +10,19 @@ from optparse import OptionParser
 execute_command = """java -classpath %(root)s/playlist/src:%(root)s/playlist/bin -DCONFIG_NAME="%(root)s/playlist/src/config.properties" -DLOG_FOLDER="/tmp" -DDELAY="%(delay)s" -DPartialPreCommit="%(partial_pre_commit)s" -DPartialCommit="%(partial_commit)s" ut.distcomp.playlist.Process %(process_no)s
 """
 
+process_no_tuple_map = {}
+process_no_pid_map = {}
 def start_process(opts, args):
+    global process_no_tuple_map
+    global process_no_pid_map
+
+    process_no_pid_map = {}
+    process_no_tuple_map = {}
+
     f = open("../config.properties")
     content = f.readline()
     lines = f.readlines()
 
-    process_no_tuple_map = {}
     i=0
     for line in lines:
         if line.startswith("port"):
@@ -35,7 +42,6 @@ def start_process(opts, args):
     print "Total process to spawn: ", proc_count
 
     # A map from process number to process Id.
-    process_no_pid_map = {}
     partial_pre_commit = opts.partial_pre_commit 
     partial_commit = opts.partial_commit
     for proc_no in range(proc_count):
@@ -132,11 +138,25 @@ if __name__ == "__main__":
         conn[0].send("11--ADD--tumhiho=http://Aashiqui&");
         
         # Waiting for vote-request to reach.
-        time.sleep(delay)
+        time.sleep(delay + 1)
 
         # Before that responds let us kill that.
         print "Killing Process 1\n"
         proc[1].kill()
+
+        # Let us re-start after 30 secs.
+        time.sleep(30)
+        command = execute_command % {'root' : opts.root, 
+                                     'process_no' : 1,
+                                     'delay' : str(int(opts.delay) * 1000),
+                                     'partial_pre_commit' : -1,
+                                     'partial_commit' : -1,
+                                    }
+        
+        # Start the process.
+        print "Going to execute: ", command
+        args = shlex.split(command)
+        process_no_pid_map[1] = subprocess.Popen(args);
 
     # COORDINATOR FAILURE AND RECOVERY. AFTER SENDING VOTE-REQUEST.
     if (opts.demo == str(2)):
@@ -155,6 +175,20 @@ if __name__ == "__main__":
         # Kill the coordinator.
         print "Killing the coordinator."
         proc[0].kill()
+
+        # Let us restart the coordinator in 30 sec.
+        time.sleep(30)
+        command = execute_command % {'root' : opts.root, 
+                                     'process_no' : 0,
+                                     'delay' : str(int(opts.delay) * 1000),
+                                     'partial_pre_commit' : -1,
+                                     'partial_commit' : -1,
+                                    }
+        
+        # Start the process.
+        print "Going to execute: ", command
+        args = shlex.split(command)
+        process_no_pid_map[0] = subprocess.Popen(args);
 
     # COORDINATOR FAILURE AND RECOVERY. AFTER SENDING PRE-COMMIT.
     if (opts.demo == str(3)):
@@ -180,7 +214,7 @@ if __name__ == "__main__":
         print "Killing the coordinator."
         proc[0].kill()
 
-
+    # Kill two coordinators, one after another.
     if (opts.demo == str(4)):
         print "We would start a transaction and then kill two coordinators one after the another.\n"
         print "Please monitor logs\n"
@@ -211,6 +245,7 @@ if __name__ == "__main__":
         print "Killing the new coordinator."
         proc[1].kill()
 
+    
     if (opts.demo == str(5)):
         print "Coordinator would crash after partial pre-commit of 1 message."
         print "Please monitor logs."

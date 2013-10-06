@@ -33,19 +33,19 @@ public class Transaction implements Runnable {
 	// State of the current process. {RESTING, UNCERTAIN, COMMITABLE, COMMIT, ABORT}
 	STATE state = STATE.RESTING;
 	
+	protected final Lock lock = new ReentrantLock();
+	protected final Condition nextMessageArrived = lock.newCondition();
+	
 	/* 
 	 * XXXX FLAGS TO BE CONTROLLED FROM OUTSIDE XXXX
 	 */
-
+	
 	// This variable is for telling whether a process wants to 
 	// accept this transaction or not.
 	public boolean decision = true;
 	
 	// This is to determine whether to send an abort decision to coordinator or not.
 	public boolean sendAbort = true;
-	
-	protected final Lock lock = new ReentrantLock();
-	protected final Condition nextMessageArrived = lock.newCondition();
 	
 	public Transaction(Process process, Message message) {
 		this.process = process;
@@ -63,8 +63,14 @@ public class Transaction implements Runnable {
 			if (state == STATE.RESTING) {
 				// If we have come here, it means that we just received a VOTE-REQ.
 				// If we don't like the song, we will simply abort.
+				
+				// We are writing this to the log file so that we can know whether this process
+				// has to recover from this transaction or not.
+				// If you would not write this, when a new transaction will start, then you don't
+				// know that whether you are recovering or you are being started afresh.
+				process.dtLogger.write(STATE.RESTING, command);
 				if (!decision) {
-					process.dtLogger.write(STATE.ABORT);
+					process.dtLogger.write(STATE.ABORT, command);
 					state = STATE.ABORT;
 					process.config.logger.warning("Transaction aborted. Not ready for this message.");
 					if(sendAbort) {
@@ -77,7 +83,7 @@ public class Transaction implements Runnable {
 					break; // STOP THE LOOP.
 				} else {
 					// Send coordinator a YES.
-					process.dtLogger.write(STATE.UNCERTAIN);
+					process.dtLogger.write(STATE.UNCERTAIN, command);
 					state = STATE.UNCERTAIN;
 					process.config.logger.info("Received: " + message.toString());
 					Message msg = new Message(process.processId, MessageType.YES, " ");
@@ -108,7 +114,7 @@ public class Transaction implements Runnable {
 			} else if (state == STATE.UNCERTAIN) {
 				if (message.type == MessageType.ABORT) {
 					stateRequestResponseReceived = true;
-					process.dtLogger.write(STATE.ABORT);
+					process.dtLogger.write(STATE.ABORT, command);
 					state = STATE.ABORT;
 					process.config.logger.info("Transaction aborted. Co-ordinator sent an abort." );
 					break; // STOP THE LOOP
@@ -153,7 +159,7 @@ public class Transaction implements Runnable {
 				process.config.logger.info("Received: " + message.toString());
 				if (message.type == MessageType.COMMIT) {
 					stateRequestResponseReceived = true;
-					process.dtLogger.write(STATE.COMMIT);
+					process.dtLogger.write(STATE.COMMIT, command);
 					state = STATE.COMMIT;
 					process.config.logger.info("Transaction Committed.");
 					break; // STOP THE LOOP

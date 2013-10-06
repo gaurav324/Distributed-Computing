@@ -24,7 +24,7 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 		this.otherState = STATE.RESTING; 
 		
 		this.BUFFER_TIMEOUT = 2000;
-		this.DECISION_TIMEOUT = process.delay + 4000;
+		this.DECISION_TIMEOUT = process.delay + this.BUFFER_TIMEOUT;
 	}
 	
 	public void run() {
@@ -90,7 +90,7 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 				if (commitFlag) {
 					process.config.logger.info("Some process has already committed. Let us all commit.");
 					if (state != STATE.COMMIT) {
-						process.dtLogger.write(STATE.COMMIT);
+						process.dtLogger.write(STATE.COMMIT, command);
 						state = STATE.COMMIT;
 					}
 					Process.waitTillDelay();
@@ -107,7 +107,7 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 				} else if (abortFlag) {
 					process.config.logger.info("Some process has already aborted. Let us all abort.");
 					if (state != STATE.ABORT) {
-						process.dtLogger.write(STATE.ABORT);
+						process.dtLogger.write(STATE.ABORT, command);
 						state = STATE.ABORT;
 					}
 					Process.waitTillDelay();
@@ -119,7 +119,7 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 				} else if (committableSet.size() == 0) {
 					process.config.logger.info("All the process are uncertain. Let us all abort.");
 					Process.waitTillDelay();
-					process.dtLogger.write(STATE.ABORT);
+					process.dtLogger.write(STATE.ABORT, command);
 					state = STATE.ABORT;
 					isRecoveryComplete = true;
 					Message msg = new Message(process.processId, MessageType.ABORT, command);
@@ -166,7 +166,7 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 				}
 			} else if (otherState == STATE.ACK_RECEIVED) {
 				process.config.logger.info("Let us COMMIT !!");
-				process.dtLogger.write(STATE.COMMIT);
+				process.dtLogger.write(STATE.COMMIT, command);
 				state = STATE.COMMIT;
 				isRecoveryComplete = true;
 				Message msg = new Message(process.processId, MessageType.COMMIT, command);

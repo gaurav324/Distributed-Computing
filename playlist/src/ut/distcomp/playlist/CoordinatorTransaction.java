@@ -23,7 +23,7 @@ public class CoordinatorTransaction extends Transaction {
 		positiveResponseSet = new HashSet<Integer>();
 		
 		this.BUFFER_TIMEOUT = 2000;
-		this.DECISION_TIMEOUT = process.delay + 4000;
+		this.DECISION_TIMEOUT = process.delay + this.BUFFER_TIMEOUT;
 	}
 	
 	@Override
@@ -141,7 +141,7 @@ public class CoordinatorTransaction extends Transaction {
 			} // End of STATE.WAIT_ACK.
 			else if (state == STATE.ACK_RECEIVED) {
 				Message msg = new Message(process.processId, MessageType.COMMIT, command);
-				process.dtLogger.write(STATE.COMMIT);
+				process.dtLogger.write(STATE.COMMIT, command);
 				state = STATE.COMMIT;
 				process.config.logger.info("Acknowledgments have been received.");
 				Process.waitTillDelay();
@@ -151,7 +151,8 @@ public class CoordinatorTransaction extends Transaction {
 				if (!System.getProperty("PartialCommit").equals("-1")) {
 					partial_count = Integer.parseInt(System.getProperty("PartialCommit"));
 				}
-				process.controller.sendMsgs(positiveResponseSet, msg.toString(), partial_count);
+				//process.controller.sendMsgs(positiveResponseSet, msg.toString(), partial_count);
+				process.controller.sendMsgs(process.upProcess.keySet(), msg.toString(), partial_count);
 				positiveResponseSet.clear();
 				processWaitSet.clear();
 			}
@@ -177,14 +178,15 @@ public class CoordinatorTransaction extends Transaction {
 	}
 	
 	public void abortTransaction() {
-		process.dtLogger.write(STATE.ABORT);
+		process.dtLogger.write(STATE.ABORT, command);
 		state = STATE.ABORT;
 		process.config.logger.warning("Transaction aborted: " + reasonToAbort);
 		
 		Message msg = new Message(process.processId, MessageType.ABORT, command);
 		Process.waitTillDelay();
 		process.config.logger.info("Sending Abort messages to processes which voted Yes.");
-		process.controller.sendMsgs(positiveResponseSet, msg.toString(), -1);
+		//process.controller.sendMsgs(positiveResponseSet, msg.toString(), -1);
+		process.controller.sendMsgs(process.upProcess.keySet(), msg.toString(), -1);
 		
 		processWaitSet.clear();
 		positiveResponseSet.clear();
