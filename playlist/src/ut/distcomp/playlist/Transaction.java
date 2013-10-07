@@ -72,6 +72,7 @@ public class Transaction implements Runnable {
 				if (!decision) {
 					process.dtLogger.write(STATE.ABORT, command);
 					state = STATE.ABORT;
+					process.notifyTransactionComplete();
 					process.config.logger.warning("Transaction aborted. Not ready for this message.");
 					if(sendAbort) {
 						process.config.logger.info("Received: " + message.toString());
@@ -162,6 +163,7 @@ public class Transaction implements Runnable {
 					process.dtLogger.write(STATE.COMMIT, command);
 					state = STATE.COMMIT;
 					process.config.logger.info("Transaction Committed.");
+					process.notifyTransactionComplete();
 					break; // STOP THE LOOP
 				} else {
 					process.config.logger.warning("Was expecting only a COMMIT message." +

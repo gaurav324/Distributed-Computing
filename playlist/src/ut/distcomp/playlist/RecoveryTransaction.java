@@ -81,6 +81,7 @@ public class RecoveryTransaction extends Transaction {
 					state = STATE.COMMIT;
 					process.config.logger.info("Received: " +  message.toString());
 					process.config.logger.info("Transaction committed.");
+					process.notifyTransactionComplete();
 					break;
 				} else if (message.type == MessageType.STATE_ABORT) {
 					abortFlag = true;
@@ -88,6 +89,7 @@ public class RecoveryTransaction extends Transaction {
 					state = STATE.ABORT;
 					process.config.logger.info("Received: " +  message.toString());
 					process.config.logger.info("Transaction aborted.");
+					process.notifyTransactionComplete();
 					break;
 				} else if (message.type != MessageType.STATE_RECOVERING) {
 					isTotalFailure = false;
@@ -99,6 +101,7 @@ public class RecoveryTransaction extends Transaction {
 					state = STATE.COMMIT;
 					process.config.logger.info("Received: " +  message.toString());
 					process.config.logger.info("Transaction committed.");
+					process.notifyTransactionComplete();
 					break;
 				} else if (message.type == MessageType.ABORT) {
 					abortFlag = true;
@@ -106,6 +109,7 @@ public class RecoveryTransaction extends Transaction {
 					state = STATE.ABORT;
 					process.config.logger.info("Received: " +  message.toString());
 					process.config.logger.info("Transaction aborted.");
+					process.notifyTransactionComplete();
 					break;
 				}
 			}

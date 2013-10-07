@@ -92,6 +92,7 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 					if (state != STATE.COMMIT) {
 						process.dtLogger.write(STATE.COMMIT, command);
 						state = STATE.COMMIT;
+						process.notifyTransactionComplete();
 					}
 					Process.waitTillDelay();
 					isRecoveryComplete = true;
@@ -109,6 +110,7 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 					if (state != STATE.ABORT) {
 						process.dtLogger.write(STATE.ABORT, command);
 						state = STATE.ABORT;
+						process.notifyTransactionComplete();
 					}
 					Process.waitTillDelay();
 					isRecoveryComplete = true;
@@ -125,6 +127,7 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 					Message msg = new Message(process.processId, MessageType.ABORT, command);
 					process.config.logger.info("Sending ABORT to all the active processes.");
 					process.controller.sendMsgs(process.upProcess.keySet(), msg.toString(), -1);
+					process.notifyTransactionComplete();
 					break;
 				} else {
 					otherState = STATE.WAIT_ACK; 
@@ -172,6 +175,7 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 				Message msg = new Message(process.processId, MessageType.COMMIT, command);
 				Process.waitTillDelay();
 				process.config.logger.info("Sending COMMIT to all the active processes.");
+				process.notifyTransactionComplete();
 				
 				int partial_count = -1;
 				if (!System.getProperty("PartialCommit").equals("-1")) {

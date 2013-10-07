@@ -368,6 +368,8 @@ public class Process {
 	}
 	
 	public void notifyTransactionComplete() {
+		String[] str = activeTransaction.command.split("=");
+		playList.put(str[0], str[1]);
 		System.out.println("Transaction is complete. We are going to: " + activeTransaction.state);
 	}
 	

@@ -144,6 +144,7 @@ public class CoordinatorTransaction extends Transaction {
 				process.dtLogger.write(STATE.COMMIT, command);
 				state = STATE.COMMIT;
 				process.config.logger.info("Acknowledgments have been received.");
+				process.notifyTransactionComplete();
 				Process.waitTillDelay();
 				process.config.logger.info("Sending COMMIT message to processes from which received ACK.");
 				
@@ -181,7 +182,7 @@ public class CoordinatorTransaction extends Transaction {
 		process.dtLogger.write(STATE.ABORT, command);
 		state = STATE.ABORT;
 		process.config.logger.warning("Transaction aborted: " + reasonToAbort);
-		
+		process.notifyTransactionComplete();
 		Message msg = new Message(process.processId, MessageType.ABORT, command);
 		Process.waitTillDelay();
 		process.config.logger.info("Sending Abort messages to processes which voted Yes.");
