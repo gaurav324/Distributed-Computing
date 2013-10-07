@@ -131,6 +131,7 @@ public class Process {
 			
 			Message msg = new Message(-1, type, command);
 			config.logger.info("DTlog: UNCERTAIN. Going to start recovery transaction.");
+			this.coordinatorProcessNumber = -1;
 			activeTransaction = new RecoveryTransaction(this, msg);
 			
 			Thread thread = new Thread(activeTransaction);
@@ -202,6 +203,7 @@ public class Process {
 		    						config.logger.warning("There is something wrong. Coordiantor is not supposed to get " + message.type);
 		    					} else {
 		    						if (activeTransaction == null) {
+		    							coordinatorProcessNumber = message.process_id;
 		    							startNewTransaction(message);
 		    						} else {
 		    							config.logger.warning(message.type + " sent by: " + message.process_id);
@@ -238,7 +240,7 @@ public class Process {
 		    						break;
 		    					} else {
 		    						if (activeTransaction != null) {
-		    							//config.logger.info("Received initially: " + msg);
+		    							config.logger.info("Received initially: " + msg);
 		    							activeTransaction.update(message);
 		    						} else {
 		    							config.logger.warning(message.type + " sent by: " + message.process_id);
