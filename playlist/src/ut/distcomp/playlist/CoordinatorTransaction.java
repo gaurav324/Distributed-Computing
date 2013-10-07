@@ -33,6 +33,7 @@ public class CoordinatorTransaction extends Transaction {
 		while((state != STATE.COMMIT && state != STATE.ABORT) || processWaitSet.size() > 0) {
 			
 			if(state == STATE.RESTING) {
+				process.dtLogger.write(STATE.UNCERTAIN, command);
 				// Update your state to waiting for all the decisions to arrive.
 				state = STATE.WAIT_DECISION;
 				

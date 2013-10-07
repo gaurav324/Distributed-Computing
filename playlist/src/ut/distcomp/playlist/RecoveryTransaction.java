@@ -12,15 +12,12 @@ public class RecoveryTransaction extends Transaction {
 		
 	public RecoveryTransaction(Process process, Message msg) {
 		super(process, msg);
-		System.out.println("Process is " + this.process);
 		
 		this.state = STATE.RECOVERING;
 		this.otherState = STATE.RESTING;
 		
 		this.BUFFER_TIMEOUT = 2000;
 		this.DECISION_TIMEOUT = process.delay + this.BUFFER_TIMEOUT;
-		
-		System.out.println("2-Process is " + this.process);
 	}
 
 	/**
