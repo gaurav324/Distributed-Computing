@@ -297,6 +297,20 @@ if __name__ == "__main__":
 
         time.sleep(5)
         conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
+
+        # Restart the coordinator after 60 secs.
+        time.sleep(60)
+        command = execute_command % {'root' : opts.root, 
+                                     'process_no' : 0,
+                                     'delay' : str(int(opts.delay) * 1000),
+                                     'partial_pre_commit' : -1,
+                                     'partial_commit' : -1,
+                                    }
+        
+        # Start the process.
+        print "Going to execute: ", command
+        args = shlex.split(command)
+        process_no_pid_map[1] = subprocess.Popen(args);       
         
     if (opts.demo == str(6)):
         print "Coordinator would crash after partial commit of 1 message."
@@ -309,6 +323,20 @@ if __name__ == "__main__":
 
         time.sleep(5)
         conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
+
+        # Restart the coordinator after 60 secs.
+        time.sleep(30)
+        command = execute_command % {'root' : opts.root, 
+                                     'process_no' : 0,
+                                     'delay' : str(int(opts.delay) * 1000),
+                                     'partial_pre_commit' : -1,
+                                     'partial_commit' : -1,
+                                    }
+        
+        # Start the process.
+        print "Going to execute: ", command
+        args = shlex.split(command)
+        process_no_pid_map[1] = subprocess.Popen(args);  
 
     from IPython import embed
     embed()
