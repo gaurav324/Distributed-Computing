@@ -56,6 +56,9 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 						if (state == STATE.ABORT) {
 							abortFlag = true;
 						}
+						if (state == STATE.COMMITABLE) {
+							committableSet.add(process.processId);
+						}
 						nextMessageArrived.signal();
 						lock.unlock();
 					}

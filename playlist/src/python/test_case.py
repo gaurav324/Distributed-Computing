@@ -176,8 +176,8 @@ if __name__ == "__main__":
         print "Killing the coordinator."
         proc[0].kill()
 
-        # Let us restart the coordinator in 30 sec.
-        time.sleep(30)
+        # Let us restart the coordinator in 40 sec.
+        time.sleep(40)
         command = execute_command % {'root' : opts.root, 
                                      'process_no' : 0,
                                      'delay' : str(int(opts.delay) * 1000),
@@ -214,6 +214,20 @@ if __name__ == "__main__":
         print "Killing the coordinator."
         proc[0].kill()
 
+        # Let us restart the coordinator in 30 sec.
+        time.sleep(30)
+        command = execute_command % {'root' : opts.root, 
+                                     'process_no' : 0,
+                                     'delay' : str(int(opts.delay) * 1000),
+                                     'partial_pre_commit' : -1,
+                                     'partial_commit' : -1,
+                                    }
+        
+        # Start the process.
+        print "Going to execute: ", command
+        args = shlex.split(command)
+        process_no_pid_map[0] = subprocess.Popen(args);
+
     # Kill two coordinators, one after another.
     if (opts.demo == str(4)):
         print "We would start a transaction and then kill two coordinators one after the another.\n"
@@ -245,6 +259,32 @@ if __name__ == "__main__":
         print "Killing the new coordinator."
         proc[1].kill()
 
+        # Let us restart the coordinator in 30 sec.
+        time.sleep(30)
+        command = execute_command % {'root' : opts.root, 
+                                     'process_no' : 0,
+                                     'delay' : str(int(opts.delay) * 1000),
+                                     'partial_pre_commit' : -1,
+                                     'partial_commit' : -1,
+                                    }
+        
+        # Start the process.
+        print "Going to execute: ", command
+        args = shlex.split(command)
+        process_no_pid_map[0] = subprocess.Popen(args);
+
+        # Let us restart the coordinator in 30 sec.
+        command = execute_command % {'root' : opts.root, 
+                                     'process_no' : 1,
+                                     'delay' : str(int(opts.delay) * 1000),
+                                     'partial_pre_commit' : -1,
+                                     'partial_commit' : -1,
+                                    }
+        
+        # Start the process.
+        print "Going to execute: ", command
+        args = shlex.split(command)
+        process_no_pid_map[1] = subprocess.Popen(args);        
     
     if (opts.demo == str(5)):
         print "Coordinator would crash after partial pre-commit of 1 message."

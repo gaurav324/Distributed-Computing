@@ -110,7 +110,7 @@ public class Process {
 			config.logger.info("Transaction completed properly last time.");
 		} else if (state == STATE.RESTING) {
 			String command = this.dtLogger.getLoggedCommand(this.processId);
-			config.logger.info("Aborting last transaction as I did not took part.");
+			config.logger.info("Aborting last transaction as I did not take part in it..");
 			this.dtLogger.write(STATE.ABORT, command);
 		} else { // When this process is in the uncertain stage.
 			String command = this.dtLogger.getLoggedCommand(this.processId);
@@ -300,8 +300,8 @@ public class Process {
 		    					} else{
 		    						System.out.println("No Songs");
 		    					}
-		    					}
-		    				break;
+		    					break;
+		    				}
 		    			}
 	        		}
 	        	}
