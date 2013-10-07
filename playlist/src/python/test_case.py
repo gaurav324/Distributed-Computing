@@ -7,7 +7,7 @@ import time
 
 from optparse import OptionParser
 
-execute_command = """java -classpath %(root)s/playlist/src:%(root)s/playlist/src -DCONFIG_NAME="%(root)s/playlist/src/config.properties" -DLOG_FOLDER="/tmp" -DDELAY="%(delay)s" -DPartialPreCommit="%(partial_pre_commit)s" -DPartialCommit="%(partial_commit)s" ut.distcomp.playlist.Process %(process_no)s
+execute_command = """java -classpath %(root)s/playlist/src:%(root)s/playlist/src -DCONFIG_NAME="%(root)s/playlist/src/config.properties" -DLOG_FOLDER="/tmp" -DDELAY="%(delay)s" -DPartialPreCommit="%(partial_pre_commit)s" -DPartialCommit="%(partial_commit)s" -DExtraCredit="%(extra_credit)s" -DDeathAfterN=0 -DDeathFromP=-1 ut.distcomp.playlist.Process %(process_no)s
 """
 
 process_no_tuple_map = {}
@@ -44,16 +44,18 @@ def start_process(opts, args):
     # A map from process number to process Id.
     partial_pre_commit = opts.partial_pre_commit 
     partial_commit = opts.partial_commit
+    extra_credit = opts.extra_credit
     for proc_no in range(proc_count):
         if (proc_no != 0):
             partial_pre_commit = -1
             partial_commit = -1
+	    extra_credit = -1
 
         command = execute_command % {'root' : opts.root, 
                                      'process_no' : proc_no,
                                      'delay' : str(int(opts.delay) * 1000),
                                      'partial_pre_commit' : partial_pre_commit,
-                                     'partial_commit' : partial_commit,
+                                     'partial_commit' : partial_commit,'extra_credit':extra_credit,
                                     }
         print "Going to execute: ", command
         args = shlex.split(command)
@@ -120,6 +122,7 @@ if __name__ == "__main__":
     # Normal case. No body dies.
     if (opts.demo == str(0)):
         
+	opts.extra_credit = -1
         # A list of processes is here.
         proc, conn = start_process(opts, args)
 
@@ -151,6 +154,7 @@ if __name__ == "__main__":
                                      'delay' : str(int(opts.delay) * 1000),
                                      'partial_pre_commit' : -1,
                                      'partial_commit' : -1,
+				     'extra_credit' : -1,
                                     }
         
         # Start the process.
@@ -266,6 +270,7 @@ if __name__ == "__main__":
                                      'delay' : str(int(opts.delay) * 1000),
                                      'partial_pre_commit' : -1,
                                      'partial_commit' : -1,
+				     'extra_credit' :-1,
                                     }
         
         # Start the process.
@@ -338,5 +343,59 @@ if __name__ == "__main__":
         args = shlex.split(command)
         process_no_pid_map[1] = subprocess.Popen(args);  
 
+    if (opts.demo == str(7)):
+        print "Coordinator would crash after writing commit to log and all other process die and recover (FOR EXTRA CREDIT!!)."
+        print "Please monitor logs."
+
+        opts.extra_credit = 1
+           
+        # A list of processes is here.
+        proc, conn = start_process(opts, args)
+
+        time.sleep(5)
+        conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
+
+	# Restart the coordinator and other process after 60 secs.
+        time.sleep(10)
+        command = execute_command % {'root' : opts.root, 
+                                     'process_no' : 0,
+                                     'delay' : str(int(opts.delay) * 1000),
+                                     'partial_pre_commit' : -1,
+                                     'partial_commit' : -1,
+        		             'extra_credit' : -1,
+                                   }
+        # Restart the coordinator after 60 secs.
+        time.sleep(10)
+        command = execute_command % {'root' : opts.root, 
+                                     'process_no' : 1,
+                                     'delay' : str(int(opts.delay) * 1000),
+                                     'partial_pre_commit' : -1,
+                                     'partial_commit' : -1,
+       				     'extra_credit' : -1,
+                                    }
+	
+	time.sleep(10)
+        command = execute_command % {'root' : opts.root, 
+                                     'process_no' : 2,
+                                     'delay' : str(int(opts.delay) * 1000),
+                                     'partial_pre_commit' : -1,
+                                     'partial_commit' : -1,
+       				     'extra_credit' : -1,
+                                    }
+
+	time.sleep(10)
+        command = execute_command % {'root' : opts.root, 
+                                     'process_no' : 3,
+                                     'delay' : str(int(opts.delay) * 1000),
+                                     'partial_pre_commit' : -1,
+                                     'partial_commit' : -1,
+       				     'extra_credit' : -1,
+                                    }
+
+        # Start the process.
+        print "Going to execute: ", command
+        args = shlex.split(command)
+        process_no_pid_map[1] = subprocess.Popen(args);  
+    
     from IPython import embed
     embed()
