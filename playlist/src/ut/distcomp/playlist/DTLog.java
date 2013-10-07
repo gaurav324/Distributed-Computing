@@ -146,24 +146,25 @@ public class DTLog {
         return msg;
 	}
 	
-	public Set<Integer> LastUpProcessSet(int process_id) {
+	public Set<Integer> getLastUpProcessSet(int process_id) {
 		final File Log_folder = new File(folder);
-   	    final File myFile = new File(Log_folder+"/Log_"+process_id+".txt"); //get my file from the log 
+   	    final File myFile = new File(Log_folder + "/" + process_id + ".DTlog"); //get my file from the log 
         String upProcess_str=null;
         Set<Integer> up_set = new HashSet<Integer>(); // to return the set of up process
         
-        if (myFile.exists() && myFile.length() != 0){
-	   	    if(myFile.canRead()){
+        if (myFile.exists() && myFile.length() != 0) {
+	   	    if(myFile.canRead()) {
 	   	    	try {
 		   	    	FileReader log_reader = new FileReader(myFile);
 		   	    	BufferedReader log_buf = new BufferedReader(log_reader);
 		   		    String str=null,temp;
-		   		    while((temp=log_buf.readLine())!=null){
+		   		    while((temp=log_buf.readLine()) != null){
 		   		    	str=temp;
 		   		    }
 		   		    String[] msg_splits = str.split(Log_SEPARATOR);
 		   		    upProcess_str = msg_splits[1];
 		   	    	
+		   		    upProcess_str = upProcess_str.substring(1, upProcess_str.length() - 1);
 		   		    String[] upStr_split = upProcess_str.split(UpSet_SEPARATOR);
 		   		    for(String upStr: upStr_split){
 		   		    	up_set.add(Integer.parseInt(upStr));

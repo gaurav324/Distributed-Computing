@@ -27,6 +27,15 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 		this.DECISION_TIMEOUT = process.delay + this.BUFFER_TIMEOUT;
 	}
 	
+	public STATE getState()
+	{
+		if (state != STATE.COMMIT && state != STATE.ABORT) {
+			return STATE.UNCERTAIN;
+		} else {
+			return state;
+		}
+	}
+	
 	public void run() {
 		lock.lock();
 		

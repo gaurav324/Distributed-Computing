@@ -255,16 +255,19 @@ public class Process {
 		    					if (activeTransaction == null) {
 		    						break;
 		    					}
+		    					String command = activeTransaction.command;
 		    					if (activeTransaction.state == STATE.COMMIT) {
 		    						type = MessageType.STATE_COMMIT;
 		    					} else if (activeTransaction.state == STATE.ABORT) {
 		    						type = MessageType.STATE_ABORT;
 		    					} else if (activeTransaction.state == STATE.RECOVERING) {
 		    						type = MessageType.STATE_RECOVERING;
+		    						command = activeTransaction.getUpStates();
 		    					} else {
 		    						type = MessageType.STATE_UNDECIDED;
 		    					}
-		    					Message stateReply = new Message(processId, type, activeTransaction.command);
+
+		    					Message stateReply = new Message(processId, type, command);
 		    					config.logger.info("Sending: " + stateReply.toString() + " to: " + message.process_id);
 		    					controller.sendMsg(message.process_id, stateReply.toString());
 		    					break;
@@ -273,7 +276,7 @@ public class Process {
 		    				case STATE_ABORT:
 		    				case STATE_RECOVERING:
 		    				case STATE_UNDECIDED: {
-		    					config.logger.info("Received: " + message.toString());
+		    					//config.logger.info("Received: " + message.toString());
 		    					if (activeTransaction != null) {
 	    							activeTransaction.update(message);
 	    						} else {
@@ -304,7 +307,10 @@ public class Process {
 		    					break;
 		    				}
 		    				case DIE: {
-		    					config.logger.warning("Got DIE msg from coordinator");
+		    					// Also remove the coordinator from upProcess map and then die. 
+		    					config.logger.warning("Received: " + message.toString());
+		    					upProcess.remove(message.process_id);
+		    					dtLogger.write(activeTransaction.getState(), activeTransaction.command);
 		    					System.exit(1);
 		    				}
 		    				
@@ -331,6 +337,11 @@ public class Process {
 	// Update the list processes.
 	public void updateProcessList(Message message) {
 		if (!upProcess.containsKey(message.process_id)) {
+			// We would not log upState list untill a recovery is going on. Otherwise, we would screw the UP list
+			// required for the total failure case.
+			if (activeTransaction != null && !(activeTransaction instanceof RecoveryTransaction)) {
+				dtLogger.write(activeTransaction.getState(), activeTransaction.command);
+			}
 			//config.logger.info(String.format("Adding %d to the upProcess list", message.process_id));
 		}
 		upProcess.put(message.process_id, System.currentTimeMillis());
@@ -352,6 +363,9 @@ public class Process {
 	        	        
 	        	        if (System.currentTimeMillis() - entry.getValue() > (HEARTBEAT_PUMP_TIME + 200)) {
 	        	            i.remove();
+	        	            if (activeTransaction != null && !(activeTransaction instanceof RecoveryTransaction)) {
+	        					dtLogger.write(activeTransaction.getState(), activeTransaction.command);
+	        				}
 	        	            //config.logger.warning(String.format("Process %d seems to dead. Clearing from up list.", entry.getKey()));
 	        	        }
 	        	    }
@@ -376,7 +390,7 @@ public class Process {
 	public void notifyTransactionComplete() {
 		String[] str = activeTransaction.command.split("=");
 		playList.put(str[0], str[1]);
-		System.out.println("Transaction is complete. We are going to: " + activeTransaction.state);
+		System.out.println("Process: " + processId + "'s transaction is complete. We are going to: " + activeTransaction.state);
 	}
 	
 	public static void waitTillDelay() {

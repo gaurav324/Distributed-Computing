@@ -1,14 +1,20 @@
 package ut.distcomp.playlist;
 
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+
 import ut.distcomp.playlist.TransactionState.STATE;
 
 public class RecoveryTransaction extends Transaction {
 	STATE otherState;
 	
-	boolean commitFlag = false;
-	boolean abortFlag = true;
-	
 	boolean isTotalFailure = true;
+	
+	Set<Integer> upProcessSet;
+	Hashtable<Integer, Set<Integer>> allUpSets;
 		
 	public RecoveryTransaction(Process process, Message msg) {
 		super(process, msg);
@@ -16,10 +22,13 @@ public class RecoveryTransaction extends Transaction {
 		this.state = STATE.RECOVERING;
 		this.otherState = STATE.RESTING;
 		
-		this.BUFFER_TIMEOUT = 2000;
+		upProcessSet = process.dtLogger.getLastUpProcessSet(process.processId);
+		allUpSets = new Hashtable<Integer, Set<Integer>>();
+		
+		this.BUFFER_TIMEOUT = 5000;
 		this.DECISION_TIMEOUT = process.delay + this.BUFFER_TIMEOUT;
 	}
-
+	
 	/**
 	 * Broadcast the STATE_ENQUIRY to all the active process.
 	 *
@@ -41,14 +50,14 @@ public class RecoveryTransaction extends Transaction {
 	@Override
 	public void run() {
 		lock.lock();
-		while(state != STATE.COMMIT || state != STATE.ABORT ) {
 
-			// Get connected properly.
-			try {
-				Thread.sleep(5000);
-			} catch (InterruptedException e1) {
-				e1.printStackTrace();
-			}
+		// Get connected properly.
+		try {
+			Thread.sleep(5000);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		while(state != STATE.COMMIT || state != STATE.ABORT ) {
 			if (otherState == STATE.RESTING) {
 				Message msg = new Message(this.process.processId, MessageType.STATE_ENQUIRY, command);
 				
@@ -63,17 +72,35 @@ public class RecoveryTransaction extends Transaction {
 						} catch (InterruptedException e) {
 							e.printStackTrace();
 						}
-						
+						lock.lock();
 						if (isTotalFailure) {
-							// We would now wait for either COMMIT/ABORT message.
-							// We would have to be super smart here.
+							if (isIntersectionPresent()) {
+								process.dtLogger.write(STATE.ABORT, command);
+								state = STATE.ABORT;
+								process.config.logger.info("Received: " +  message.toString());
+								process.config.logger.info("Transaction aborted.");
+								process.notifyTransactionComplete();
+							} else {
+								try {
+									// WAIT for another 5 seconds and then re-try.
+									lock.unlock();
+									Thread.sleep(5000);
+									lock.lock();
+									otherState = STATE.RESTING;
+									boolean isTotalFailure = true;
+									nextMessageArrived.signal();
+								} catch (InterruptedException e) {
+									e.printStackTrace();
+								}
+							}
 						}
+						allUpSets.clear();
+						lock.unlock();
 					}
 				};
 				th.start();
 			} else if (otherState == STATE.STATE_ENQUIRY_WAIT) {
 				if (message.type == MessageType.STATE_COMMIT) {
-					commitFlag = true;
 					process.dtLogger.write(STATE.COMMIT, command);
 					state = STATE.COMMIT;
 					process.config.logger.info("Received: " +  message.toString());
@@ -81,35 +108,45 @@ public class RecoveryTransaction extends Transaction {
 					process.notifyTransactionComplete();
 					break;
 				} else if (message.type == MessageType.STATE_ABORT) {
-					abortFlag = true;
 					process.dtLogger.write(STATE.ABORT, command);
 					state = STATE.ABORT;
 					process.config.logger.info("Received: " +  message.toString());
 					process.config.logger.info("Transaction aborted.");
 					process.notifyTransactionComplete();
 					break;
-				} else if (message.type != MessageType.STATE_RECOVERING) {
+				} else if (message.type != MessageType.STATE_RECOVERING) { 
+					// If I get any message, abort or commit = recovery complete.
+					// If I get resting or uncertain, it also means that someone
+					// is running the transaction.
+					process.config.logger.info("Received: " +  message.toString());
 					isTotalFailure = false;
-				} 
-			} else { // We are indefinitely waiting for a decision.
-				if (message.type == MessageType.COMMIT) {
-					commitFlag = true;
-					process.dtLogger.write(STATE.COMMIT, command);
-					state = STATE.COMMIT;
-					process.config.logger.info("Received: " +  message.toString());
-					process.config.logger.info("Transaction committed.");
-					process.notifyTransactionComplete();
-					break;
+				} else if (message.type == MessageType.COMMIT) {
+						process.dtLogger.write(STATE.COMMIT, command);
+						state = STATE.COMMIT;
+						process.config.logger.info("Received: " +  message.toString());
+						process.config.logger.info("Transaction committed.");
+						process.notifyTransactionComplete();
+						break;
 				} else if (message.type == MessageType.ABORT) {
-					abortFlag = true;
-					process.dtLogger.write(STATE.ABORT, command);
-					state = STATE.ABORT;
-					process.config.logger.info("Received: " +  message.toString());
-					process.config.logger.info("Transaction aborted.");
-					process.notifyTransactionComplete();
-					break;
+						process.dtLogger.write(STATE.ABORT, command);
+						state = STATE.ABORT;
+						process.config.logger.info("Received: " +  message.toString());
+						process.config.logger.info("Transaction aborted.");
+						process.notifyTransactionComplete();
+						break;
+				} else {
+					process.config.logger.info("Received: " + message.toString());
+					
+					Set<Integer> upProcessSetRecived = new HashSet<Integer>();
+					String payload = message.payLoad.substring(1, message.payLoad.length() - 1);
+					String[] payload_split = payload.split(DTLog.UpSet_SEPARATOR);
+					for(String proc_no: payload_split){
+						upProcessSetRecived.add(Integer.parseInt(proc_no));
+		   		    }
+					
+					allUpSets.put(message.process_id, upProcessSetRecived);
 				}
-			}
+			} 
 			
 			// Start waiting for the next message to come.
 			try {
@@ -130,5 +167,33 @@ public class RecoveryTransaction extends Transaction {
 		nextMessageArrived.signal();
 		
 		lock.unlock();
+	}
+	
+	private boolean isIntersectionPresent() {
+		Set<Integer> intersection = new HashSet<Integer>(upProcessSet);
+		intersection.add(process.processId);
+		
+		for (Map.Entry<Integer, Set<Integer>> entry : allUpSets.entrySet())
+		{
+			Set<Integer> temp = entry.getValue();
+			temp.add((Integer) entry.getKey());
+			
+			intersection.retainAll(temp);
+		}
+
+		boolean isIntersectionPresent = true;
+		allUpSets.put(process.processId, upProcessSet);
+		for (Integer i : intersection) {
+			if (!allUpSets.containsKey(i)) {
+				System.out.println("Allupsets dont have: " + i);
+				isIntersectionPresent = false;
+			}
+		}
+		
+		return isIntersectionPresent;
+	}
+	
+	public String getUpStates() {
+		return upProcessSet.toString();
 	}
 }

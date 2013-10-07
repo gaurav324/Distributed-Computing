@@ -60,6 +60,13 @@ public class Transaction implements Runnable {
 		deathAfter.put(Integer.parseInt(System.getProperty("DeathFromP")), Integer.parseInt(System.getProperty("DeathAfterN")));
 	}
 	
+	public STATE getState() {
+		if (state == STATE.COMMITABLE) {
+			return STATE.UNCERTAIN;
+		}
+		return this.state;
+	}
+	
 	@Override
 	public void run() {
 		lock.lock();
@@ -286,4 +293,7 @@ public class Transaction implements Runnable {
 		lock.unlock();
 	}
 
+	public String getUpStates() {
+		return "";
+	}
 }

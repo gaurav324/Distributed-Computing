@@ -26,6 +26,15 @@ public class CoordinatorTransaction extends Transaction {
 		this.DECISION_TIMEOUT = process.delay + this.BUFFER_TIMEOUT;
 	}
 	
+	public STATE getState()
+	{
+		if (state != STATE.COMMIT && state != STATE.ABORT) {
+			return STATE.UNCERTAIN;
+		} else {
+			return state;
+		}
+	}
+	
 	@Override
 	public void run() {
 		lock.lock();
