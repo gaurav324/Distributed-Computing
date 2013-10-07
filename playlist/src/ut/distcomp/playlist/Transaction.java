@@ -201,11 +201,13 @@ public class Transaction implements Runnable {
 		boolean nextChoosen = false;
 		
 		int nextCoordinator = (process.coordinatorProcessNumber + 1 ) % process.config.numProcesses;
+		process.config.logger.info("As per round robin, Selecting: " + nextCoordinator);
 		while(!nextChoosen) {
 			if (nextCoordinator != process.processId) {
 				if (process.upProcess.keySet().contains(nextCoordinator)) {
 					nextChoosen = true;
 				} else {
+					process.config.logger.info("Discarding: " + nextCoordinator + ", as it is down.");
 					nextCoordinator = (nextCoordinator + 1) % process.config.numProcesses;
 				}
 			} else {
