@@ -61,6 +61,7 @@ public class IncomingSock extends Thread {
 					int curIdx;
 					while ((curIdx = dataStr.indexOf(MSG_SEP, curPtr)) != -1) {
 						queue.offer(dataStr.substring(curPtr, curIdx));
+						String x = dataStr.substring(curPtr, curIdx);
 						curPtr = curIdx + 1;
 					}
 					in.reset();

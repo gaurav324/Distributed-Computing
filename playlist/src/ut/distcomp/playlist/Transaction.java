@@ -129,6 +129,7 @@ public class Transaction implements Runnable {
 					stateRequestResponseReceived = true;
 					process.dtLogger.write(STATE.ABORT, command);
 					state = STATE.ABORT;
+					process.notifyTransactionComplete();
 					process.config.logger.info("Transaction aborted. Co-ordinator sent an abort." );
 					break; // STOP THE LOOP
 				}

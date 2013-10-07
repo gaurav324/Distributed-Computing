@@ -14,8 +14,9 @@ public class Queue<String> extends ConcurrentLinkedQueue<String> {
 	public boolean offer(String str) {
 		lock.lock();
 		try {
+			boolean status = super.offer(str);
 			notEmpty.signal();
-			return super.offer(str);
+			return status;
 		}
 		finally {
 			lock.unlock();
@@ -33,7 +34,8 @@ public class Queue<String> extends ConcurrentLinkedQueue<String> {
 					e.printStackTrace();
 				}
 			}
-			return super.poll();
+			String result = super.poll();
+			return result;
 		} finally {
 			lock.unlock();
 		}

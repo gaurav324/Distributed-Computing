@@ -192,6 +192,7 @@ public class Process {
 		    						startNewTransaction(message);
 		    					} else {
 		    						config.logger.warning("I am not the coordiantor. Don't send me: " + message.type);
+		    						System.out.println("I am not the coordiantor. Don't send me: " + message.type);
 		    					}
 		    					break;
 		    				} // End of ADD/DELTE/UPDATE case.
@@ -230,13 +231,14 @@ public class Process {
 		    				case YES:
 		    				case NO:
 		    				case ACK: 
-		    				case STATE_VALUE:{
+		    				case STATE_VALUE: {
 		    					if (coordinatorProcessNumber != processId) {
 		    						config.logger.warning(message.type + " sent by: " + message.process_id);
 		    						config.logger.warning("There is something wrong. I am not coorindator. Coordinator should get " + message.type);
 		    						break;
 		    					} else {
 		    						if (activeTransaction != null) {
+		    							//config.logger.info("Received initially: " + msg);
 		    							activeTransaction.update(message);
 		    						} else {
 		    							config.logger.warning(message.type + " sent by: " + message.process_id);
@@ -407,15 +409,17 @@ public class Process {
 	}
 	
 	public void notifyTransactionComplete() {
-		if (activeTransaction.command.toUpperCase().startsWith("DELETE")) {
-			if (playList.containsKey(activeTransaction.command.trim())) {
-				playList.remove(activeTransaction.command.trim());
+		if (activeTransaction.state == STATE.COMMIT) {
+			if (!activeTransaction.command.contains("=")) {
+				if (playList.containsKey(activeTransaction.command.trim())) {
+					playList.remove(activeTransaction.command.trim());
+				} else {
+					System.out.println("ProcessId: " + processId + ": This song was not found in the playlist.");
+				}
 			} else {
-				System.out.println("ProcessId: " + processId + ": This song was not found in the playlist.");
+				String[] str = activeTransaction.command.split("=");
+				playList.put(str[0], str[1]);
 			}
-		} else {
-			String[] str = activeTransaction.command.split("=");
-			playList.put(str[0], str[1]);
 		}
 		// Store your state in the prevTransactionState variable and get ready for the new transaction.
 		prevTransactionState = activeTransaction.state;
