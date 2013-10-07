@@ -12,9 +12,11 @@ execute_command = """java -classpath %(root)s/playlist/src:%(root)s/playlist/src
 
 process_no_tuple_map = {}
 process_no_pid_map = {}
+proc_count = -1
 def start_process(opts, args):
     global process_no_tuple_map
     global process_no_pid_map
+    global proc_count
 
     process_no_pid_map = {}
     process_no_tuple_map = {}
@@ -105,6 +107,7 @@ def getopts():
                               4. CASCADE CO-ORDINATOR FAILURE - 2.
                               5. Partial PreCommit.
                               6. Partial Commit.
+                              7. Extra Credit Error.
                            """)
 
     opts,args = parser.parse_args()
@@ -154,7 +157,7 @@ if __name__ == "__main__":
                                      'delay' : str(int(opts.delay) * 1000),
                                      'partial_pre_commit' : -1,
                                      'partial_commit' : -1,
-				     'extra_credit' : -1,
+				                     'extra_credit' : -1,
                                     }
         
         # Start the process.
@@ -355,47 +358,25 @@ if __name__ == "__main__":
         time.sleep(5)
         conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
 
-	# Restart the coordinator and other process after 60 secs.
-        time.sleep(10)
-        command = execute_command % {'root' : opts.root, 
-                                     'process_no' : 0,
-                                     'delay' : str(int(opts.delay) * 1000),
-                                     'partial_pre_commit' : -1,
-                                     'partial_commit' : -1,
-        		             'extra_credit' : -1,
-                                   }
-        # Restart the coordinator after 60 secs.
-        time.sleep(10)
-        command = execute_command % {'root' : opts.root, 
-                                     'process_no' : 1,
-                                     'delay' : str(int(opts.delay) * 1000),
-                                     'partial_pre_commit' : -1,
-                                     'partial_commit' : -1,
-       				     'extra_credit' : -1,
-                                    }
+        time.sleep(40 + int(opts.delay) * 8)
+
+        # Restart the coordinator after 10 secs.
+        for i in range(proc_count):
+            if i == 0:
+                continue
+            else:
+                command = execute_command % { 'root' : opts.root, 
+                                              'process_no' : i,
+                                              'delay' : str(int(opts.delay) * 1000),
+                                              'partial_pre_commit' : -1,
+                                              'partial_commit' : -1,
+       				                          'extra_credit' : -1,
+                                            }
 	
-	time.sleep(10)
-        command = execute_command % {'root' : opts.root, 
-                                     'process_no' : 2,
-                                     'delay' : str(int(opts.delay) * 1000),
-                                     'partial_pre_commit' : -1,
-                                     'partial_commit' : -1,
-       				     'extra_credit' : -1,
-                                    }
-
-	time.sleep(10)
-        command = execute_command % {'root' : opts.root, 
-                                     'process_no' : 3,
-                                     'delay' : str(int(opts.delay) * 1000),
-                                     'partial_pre_commit' : -1,
-                                     'partial_commit' : -1,
-       				     'extra_credit' : -1,
-                                    }
-
-        # Start the process.
-        print "Going to execute: ", command
-        args = shlex.split(command)
-        process_no_pid_map[1] = subprocess.Popen(args);  
+                # Start the process.
+                print "Going to execute: ", command
+                args = shlex.split(command)
+                process_no_pid_map[i] = subprocess.Popen(args);  
     
     from IPython import embed
     embed()

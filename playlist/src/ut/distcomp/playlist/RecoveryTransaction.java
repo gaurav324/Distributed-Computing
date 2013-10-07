@@ -77,7 +77,7 @@ public class RecoveryTransaction extends Transaction {
 							if (isIntersectionPresent()) {
 								process.dtLogger.write(STATE.ABORT, command);
 								state = STATE.ABORT;
-								process.config.logger.info("Received: " +  message.toString());
+								process.config.logger.info("All process present in the intersection set are UP.");
 								process.config.logger.info("Transaction aborted.");
 								process.notifyTransactionComplete();
 							} else {
@@ -185,7 +185,6 @@ public class RecoveryTransaction extends Transaction {
 		allUpSets.put(process.processId, upProcessSet);
 		for (Integer i : intersection) {
 			if (!allUpSets.containsKey(i)) {
-				System.out.println("Allupsets dont have: " + i);
 				isIntersectionPresent = false;
 			}
 		}

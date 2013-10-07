@@ -51,6 +51,9 @@ public class Process {
 	
 	public DTLog dtLogger;
 	
+	// State of my previous(mine state) before dying last time.
+	public STATE prevTransactionState;
+	
 	//// VARIABLES FOR INTERACTION WITH THE SYSTEM ////
 	static int delay;
 	
@@ -107,12 +110,15 @@ public class Process {
 		
 		if (state == null) {
 			config.logger.info("Got nothing from the DT log file.");
+			prevTransactionState = null;
 		} else if (state == STATE.COMMIT || state == STATE.ABORT) {
 			config.logger.info("Transaction completed properly last time.");
+			prevTransactionState = state;
 		} else if (state == STATE.RESTING) {
 			String command = this.dtLogger.getLoggedCommand(this.processId);
 			config.logger.info("Aborting last transaction as I did not take part in it..");
 			this.dtLogger.write(STATE.ABORT, command);
+			prevTransactionState = STATE.ABORT;
 		} else { // When this process is in the uncertain stage.
 			String command = this.dtLogger.getLoggedCommand(this.processId);
 			
@@ -253,8 +259,21 @@ public class Process {
 		    					config.logger.info("Received: " + message.toString());
 		    					MessageType type;
 		    					if (activeTransaction == null) {
+		    						if (prevTransactionState != null) {
+		    							if (prevTransactionState == STATE.COMMIT) {
+				    						type = MessageType.STATE_COMMIT;
+				    					} else if (prevTransactionState == STATE.ABORT) {
+				    						type = MessageType.STATE_ABORT;
+				    					} else {
+				    						// Not reachable.
+				    						break;
+				    					}
+		    							Message stateReply = new Message(processId, type, " ");
+				    					config.logger.info("Sending: " + stateReply.toString() + " to: " + message.process_id);
+				    					controller.sendMsg(message.process_id, stateReply.toString());
+		    						}
 		    						break;
-		    					}
+		    					} 
 		    					String command = activeTransaction.command;
 		    					if (activeTransaction.state == STATE.COMMIT) {
 		    						type = MessageType.STATE_COMMIT;
@@ -388,9 +407,21 @@ public class Process {
 	}
 	
 	public void notifyTransactionComplete() {
-		String[] str = activeTransaction.command.split("=");
-		playList.put(str[0], str[1]);
-		System.out.println("Process: " + processId + "'s transaction is complete. We are going to: " + activeTransaction.state);
+		if (activeTransaction.command.toUpperCase().startsWith("DELETE")) {
+			if (playList.containsKey(activeTransaction.command.trim())) {
+				playList.remove(activeTransaction.command.trim());
+			} else {
+				System.out.println("ProcessId: " + processId + ": This song was not found in the playlist.");
+			}
+		} else {
+			String[] str = activeTransaction.command.split("=");
+			playList.put(str[0], str[1]);
+		}
+		// Store your state in the prevTransactionState variable and get ready for the new transaction.
+		prevTransactionState = activeTransaction.state;
+		config.logger.info("Transaction is complete. State: " + activeTransaction.state);
+		System.out.println("Process: " + processId + "'s transaction is complete. State: " + activeTransaction.state);
+		activeTransaction = null;
 	}
 	
 	public static void waitTillDelay() {
