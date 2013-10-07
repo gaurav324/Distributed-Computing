@@ -167,7 +167,12 @@ public class DTLog {
 		   		    upProcess_str = upProcess_str.substring(1, upProcess_str.length() - 1);
 		   		    String[] upStr_split = upProcess_str.split(UpSet_SEPARATOR);
 		   		    for(String upStr: upStr_split){
-		   		    	up_set.add(Integer.parseInt(upStr));
+		   		    	try {
+		   		    		up_set.add(Integer.parseInt(upStr));
+		   		    	}
+		   		    	catch (java.lang.NumberFormatException ex) {
+		   		    		// Ignore.
+		   		    	}
 		   		    }
 	   	    	} catch (IOException ex) {
 	   	    		ex.printStackTrace();

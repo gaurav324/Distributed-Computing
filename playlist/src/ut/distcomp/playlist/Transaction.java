@@ -198,26 +198,34 @@ public class Transaction implements Runnable {
 
 	private void electCordinator() {
 		stateRequestReceived = false;
-		Integer[] keys = (Integer[]) process.upProcess.keySet().toArray(new Integer[0]);
-		Arrays.sort(keys);
+		boolean nextChoosen = false;
 		
-		if (keys[0] > process.processId) {
-			keys[0] = process.processId;
+		int nextCoordinator = (process.coordinatorProcessNumber + 1 ) % process.config.numProcesses;
+		while(!nextChoosen) {
+			if (nextCoordinator != process.processId) {
+				if (process.upProcess.keySet().contains(nextCoordinator)) {
+					nextChoosen = true;
+				} else {
+					nextCoordinator = (nextCoordinator + 1) % process.config.numProcesses;
+				}
+			} else {
+				nextChoosen = true;
+			}
 		}
 		
-		process.config.logger.info("Elected new coordinator: " + keys[0]);
+		process.config.logger.info("Elected new coordinator: " + nextCoordinator);
 		
 		// Sending UR_SELECTED message to the new coordinator.
 		// Send a message to the new coordinator that he is the new coordinator.
 		// I would send the message to myself also, if I am the new coordinator.
 		Message msg = new Message(process.processId, MessageType.UR_SELECTED, command);
 		Process.waitTillDelay();
-		process.config.logger.info("Sending: " + msg + " to: " + keys[0]);
-		process.controller.sendMsg(keys[0], msg.toString());
+		process.config.logger.info("Sending: " + msg + " to: " + nextCoordinator);
+		process.controller.sendMsg(nextCoordinator, msg.toString());
 		
 		// If I am not the elected coordinator then update the new coordinator number.
-		if (keys[0] != process.processId) {
-			process.coordinatorProcessNumber = keys[0];
+		if (nextCoordinator != process.processId) {
+			process.coordinatorProcessNumber = nextCoordinator;
 			
 			// Start waiting for the new STATE_REQ message.
 			Thread th = new Thread() {
