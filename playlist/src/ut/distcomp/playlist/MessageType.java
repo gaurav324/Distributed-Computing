@@ -33,4 +33,7 @@ public enum MessageType {
 		
 		// Misc.
 		PRINT_STATE,
+		
+		//To kill any process
+		DIE,
 };

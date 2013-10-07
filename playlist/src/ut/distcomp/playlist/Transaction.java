@@ -1,6 +1,7 @@
 package ut.distcomp.playlist;
 
 import java.util.Arrays;
+import java.util.Hashtable;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -47,12 +48,16 @@ public class Transaction implements Runnable {
 	// This is to determine whether to send an abort decision to coordinator or not.
 	public boolean sendAbort = true;
 	
+	//hashtable to keep track of n messages from process p
+	Hashtable<Integer,Integer> deathAfter = new Hashtable<Integer, Integer>();
+	
 	public Transaction(Process process, Message message) {
 		this.process = process;
 		this.command = message.payLoad;
 		this.message = message;
 		this.BUFFER_TIMEOUT = 4000;
 		this.DECISION_TIMEOUT = process.delay + this.BUFFER_TIMEOUT;
+		deathAfter.put(Integer.parseInt(System.getProperty("DeathFromP")), Integer.parseInt(System.getProperty("DeathAfterN")));
 	}
 	
 	@Override

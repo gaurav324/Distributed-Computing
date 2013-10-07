@@ -150,11 +150,21 @@ public class CoordinatorTransaction extends Transaction {
 				process.config.logger.info("Sending COMMIT message to processes from which received ACK.");
 				
 				int partial_count = -1;
-				if (!System.getProperty("PartialCommit").equals("-1")) {
-					partial_count = Integer.parseInt(System.getProperty("PartialCommit"));
+				int extra_credit = -1;
+				if(!System.getProperty("ExtraCredit").equals("-1")) {
+					System.out.println("Extra credit executing");
+					extra_credit = Integer.parseInt(System.getProperty("ExtraCredit"));
+					Message dieMessage = new Message(process.processId, MessageType.DIE, " ");
+					process.controller.sendMsgs(process.upProcess.keySet(), dieMessage.toString(), partial_count);
+					System.exit(1);
+				}else{
+				
+					if (!System.getProperty("PartialCommit").equals("-1")) {
+						partial_count = Integer.parseInt(System.getProperty("PartialCommit"));
+					}
+					//process.controller.sendMsgs(positiveResponseSet, msg.toString(), partial_count);
+					process.controller.sendMsgs(process.upProcess.keySet(), msg.toString(), partial_count);
 				}
-				//process.controller.sendMsgs(positiveResponseSet, msg.toString(), partial_count);
-				process.controller.sendMsgs(process.upProcess.keySet(), msg.toString(), partial_count);
 				positiveResponseSet.clear();
 				processWaitSet.clear();
 			}

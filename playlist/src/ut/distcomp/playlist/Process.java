@@ -60,7 +60,7 @@ public class Process {
 		delay = Integer.parseInt(System.getProperty("DELAY"));
 		this.upProcess = new Hashtable<Integer, Long>();
 		this.coordinatorProcessNumber = 0;
-		
+	
 		try {
 			Handler fh = new FileHandler(System.getProperty("LOG_FOLDER") + "/" + processId + ".log");
 			fh.setLevel(Level.FINEST);
@@ -78,6 +78,7 @@ public class Process {
 		this.controller = new NetController(this.processId, this.config, this.queue);
 		
 		this.dtLogger = new DTLog(this);
+			
 	}
 	
 	public static void main(String[] args) {
@@ -302,6 +303,11 @@ public class Process {
 		    					}
 		    					break;
 		    				}
+		    				case DIE: {
+		    					config.logger.warning("Got DIE msg from coordinator");
+		    					System.exit(1);
+		    				}
+		    				
 		    			}
 	        		}
 	        	}

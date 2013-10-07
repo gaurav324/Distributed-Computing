@@ -185,7 +185,7 @@ public class RecoveryCoordinatorTransaction extends Transaction {
 					partial_count = Integer.parseInt(System.getProperty("PartialCommit"));
 				}
 				
-				process.controller.sendMsgs(process.upProcess.keySet(), msg.toString(), partial_count);
+				process.controller.sendMsgs(process.upProcess.keySet(), msg.toString(), partial_count -1);
 				break;
 			}
 			try {
