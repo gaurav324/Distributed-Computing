@@ -189,9 +189,24 @@ public class CoordinatorTransaction extends Transaction {
 		lock.unlock();
 	}
 	
+	private void dieIfNMessagesReceived() {
+		if (process.deathAfter.containsKey(message.process_id)) {
+			int n = process.deathAfter.get(message.process_id);
+			n = n - 1;
+			if (n == 0) {
+				process.config.logger.info("Received n messages from" + message.process_id);
+				process.config.logger.warning("Killing  myself"); 
+				System.exit(1);
+			}
+			process.deathAfter.put(message.process_id, n);
+		}
+	}
+		
 	public void update(Message message) {
 		lock.lock();
 		
+		dieIfNMessagesReceived();
+
 		this.message = message;
 		nextMessageArrived.signal();
 		

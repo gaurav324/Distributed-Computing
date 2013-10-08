@@ -99,7 +99,6 @@ public class DTLog {
 		   		    	str=temp;
 		   		    }
 		   		    String[] msg_splits = str.split(Log_SEPARATOR);
-		   		    System.out.println(msg_splits[0] + " "  + msg_splits[1] + " " + msg_splits[2] + " " + msg_splits[3]);
 		   		    msg = msg_splits[2];
 	   	    	} catch(IOException ex) {
 	   	    		ex.printStackTrace();

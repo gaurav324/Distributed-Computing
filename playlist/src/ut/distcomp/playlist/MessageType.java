@@ -17,7 +17,7 @@ public enum MessageType {
 		// Message to Coordinator from outside.
 		ADD,
 		DELETE,
-		UPDATE,
+		EDIT,
 		
 		// TERMINATION related messages.
 		UR_SELECTED,

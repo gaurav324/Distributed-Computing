@@ -57,12 +57,17 @@ public class Process {
 	//// VARIABLES FOR INTERACTION WITH THE SYSTEM ////
 	static int delay;
 	
+	// We have to die after getting n messages from P.
+	// P=key, and n=messages.
+	Hashtable<Integer,Integer> deathAfter = new Hashtable<Integer, Integer>();
+	
 	public Process(int processId) {
 		this.processId = processId;
 		this.configName = System.getProperty("CONFIG_NAME");
-		delay = Integer.parseInt(System.getProperty("DELAY"));
 		this.upProcess = new Hashtable<Integer, Long>();
 		this.coordinatorProcessNumber = 0;
+		
+		delay = Integer.parseInt(System.getProperty("DELAY"));
 	
 		try {
 			Handler fh = new FileHandler(System.getProperty("LOG_FOLDER") + "/" + processId + ".log");
@@ -77,11 +82,19 @@ public class Process {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+		this.playList = StateRecovery.readStateFile(this);
 		this.queue = new Queue<String>();
 		this.controller = new NetController(this.processId, this.config, this.queue);
 		
 		this.dtLogger = new DTLog(this);
-			
+		
+		//  XXX JUST FOR THE DEMO.
+		// This is happening for the first time.
+		String deathAfterString = System.getProperty("DeathAfter");
+		Integer message_count = Integer.parseInt(deathAfterString.split("=")[0]);
+		Integer process_number = Integer.parseInt(deathAfterString.split("=")[1]);
+		deathAfter.put(process_number, message_count);		
 	}
 	
 	public static void main(String[] args) {
@@ -107,7 +120,7 @@ public class Process {
 	// Returns a flag telling whether in process of recovering or not.
 	private boolean checkForRecovery() {
 		STATE state = this.dtLogger.getLoggedState(this.processId);
-		
+				
 		if (state == null) {
 			config.logger.info("Got nothing from the DT log file.");
 			prevTransactionState = null;
@@ -124,7 +137,7 @@ public class Process {
 			
 			MessageType type;
 			if (command.contains("=")) {
-				type = MessageType.UPDATE;
+				type = MessageType.EDIT;
 			} else {
 				type  = MessageType.DELETE;
 			}
@@ -184,11 +197,24 @@ public class Process {
 		    				} // End of Heartbeat case.
 		    				case ADD:
 		    				case DELETE:
-		    				case UPDATE: {
+		    				case EDIT: {
 		    					if (coordinatorProcessNumber == processId) {
 		    						if (activeTransaction != null) {
+		    							System.out.println("A transaction is already running. Ignoring this request.");
 			    						config.logger.warning("A transaction is already running. Ignoring this request.");
 			    						break;
+		    						}
+		    						if (message.type == MessageType.EDIT 
+		    								&& !playList.containsKey(message.payLoad.split("=")[0])) {
+		    							System.out.println("No entry found to EDIT.");
+		    							config.logger.warning("No entry found to EDIT.");
+		    							break;
+		    						}
+		    						if (message.type == MessageType.DELETE 
+		    								&& !playList.containsKey(message.payLoad.trim())) {
+		    							System.out.println("No entry found to DELETE.");
+		    							config.logger.warning("No entry found to DELETE.");
+		    							break;
 		    						}
 		    						startNewTransaction(message);
 		    					} else {
@@ -309,14 +335,14 @@ public class Process {
 		    					break;
 		    				}
 		    				case PRINT_STATE: {
-		    					if(activeTransaction==null)
+		    					if(activeTransaction == null)
 		    					{
-		    						System.out.println("Transaction not started yet.");
+		    						System.out.println("No transaction is going on.");
 		    					} else {
 		    						System.out.println("STATE is "+ activeTransaction.state);
 		    					}
 
-		    					System.out.println("Current Playlist contains:.");
+		    					System.out.println("Current Playlist contains: \n");
 		    					Enumeration<String> songs = playList.keys();
 		    					if(songs.hasMoreElements()) {
 			    					while(songs.hasMoreElements())
@@ -422,6 +448,8 @@ public class Process {
 				String[] str = activeTransaction.command.split("=");
 				playList.put(str[0], str[1]);
 			}
+			
+			StateRecovery.updateStateFile(this);
 		}
 		// Store your state in the prevTransactionState variable and get ready for the new transaction.
 		prevTransactionState = activeTransaction.state;
@@ -435,7 +463,6 @@ public class Process {
 			config.logger.info("Waiting for " + Process.delay / 1000 + " secs.");
 			Thread.sleep(Process.delay);
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

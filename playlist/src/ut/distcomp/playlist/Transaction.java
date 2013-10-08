@@ -47,17 +47,13 @@ public class Transaction implements Runnable {
 	
 	// This is to determine whether to send an abort decision to coordinator or not.
 	public boolean sendAbort = true;
-	
-	//hashtable to keep track of n messages from process p
-	Hashtable<Integer,Integer> deathAfter = new Hashtable<Integer, Integer>();
-	
+
 	public Transaction(Process process, Message message) {
 		this.process = process;
 		this.command = message.payLoad;
 		this.message = message;
 		this.BUFFER_TIMEOUT = 4000;
 		this.DECISION_TIMEOUT = process.delay + this.BUFFER_TIMEOUT;
-		deathAfter.put(Integer.parseInt(System.getProperty("DeathFromP")), Integer.parseInt(System.getProperty("DeathAfterN")));
 	}
 	
 	public STATE getState() {
@@ -73,6 +69,7 @@ public class Transaction implements Runnable {
 		while(state != STATE.COMMIT && state != STATE.ABORT) {
 			
 			if (state == STATE.RESTING) {
+				dieIfNMessagesReceived();
 				// If we have come here, it means that we just received a VOTE-REQ.
 				// If we don't like the song, we will simply abort.
 				
@@ -263,6 +260,8 @@ public class Transaction implements Runnable {
 	public void update(Message message) {
 		lock.lock();
 		
+		dieIfNMessagesReceived();
+
 		this.message = message;
 		if (message.type == MessageType.STATE_REQ) {
 			stateRequestReceived = true;
@@ -302,6 +301,19 @@ public class Transaction implements Runnable {
 		}
 		
 		lock.unlock();
+	}
+
+	private void dieIfNMessagesReceived() {
+		if (process.deathAfter.containsKey(message.process_id)) {
+			int n = process.deathAfter.get(message.process_id);
+			n = n - 1;
+			if (n == 0) {
+				process.config.logger.info("Received n messages from: " + message.process_id);
+				process.config.logger.warning("Killing  myself"); 
+				System.exit(1);
+			}
+			process.deathAfter.put(message.process_id, n);
+		}
 	}
 
 	public String getUpStates() {
