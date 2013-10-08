@@ -161,7 +161,7 @@ public class CoordinatorTransaction extends Transaction {
 				int partial_count = -1;
 				int extra_credit = -1;
 				if(!System.getProperty("ExtraCredit").equals("-1")) {
-					System.out.println("Extra credit executing");
+					System.out.println("Extra credit executing.");
 					extra_credit = Integer.parseInt(System.getProperty("ExtraCredit"));
 					Message dieMessage = new Message(process.processId, MessageType.DIE, " ");
 					process.controller.sendMsgs(process.upProcess.keySet(), dieMessage.toString(), partial_count);

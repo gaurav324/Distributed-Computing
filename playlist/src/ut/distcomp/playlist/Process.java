@@ -216,6 +216,13 @@ public class Process {
 		    							config.logger.warning("No entry found to DELETE.");
 		    							break;
 		    						}
+		    						if (upProcess.size() != config.numProcesses - 1) {
+		    							System.out.println("Not starting a transaction as all the process are not up.");
+		    							config.logger.warning("Not starting a transaction as all the process are not up.");
+		    							
+		    							break;
+		    						}
+		    						
 		    						startNewTransaction(message);
 		    					} else {
 		    						config.logger.warning("I am not the coordiantor. Don't send me: " + message.type);
@@ -266,7 +273,6 @@ public class Process {
 		    						break;
 		    					} else {
 		    						if (activeTransaction != null) {
-		    							config.logger.info("Received initially: " + msg);
 		    							activeTransaction.update(message);
 		    						} else {
 		    							config.logger.warning(message.type + " sent by: " + message.process_id);
@@ -373,9 +379,15 @@ public class Process {
 	
 	protected void startCoordinatorRecoveryTransaction(Message message) {
 		coordinatorProcessNumber = processId;
+		
+		STATE state = prevTransactionState;
+		if (activeTransaction != null) {
+			state = activeTransaction.state;
+			activeTransaction.enforceStop();
+		}
 		RecoveryCoordinatorTransaction newTransaction = 
-				new RecoveryCoordinatorTransaction(this, message, activeTransaction.state);
-		activeTransaction.enforceStop();
+				new RecoveryCoordinatorTransaction(this, message, state);
+		
 		activeTransaction = newTransaction;
 		
 		config.logger.info("Yeay !! I am the new coordinator");
