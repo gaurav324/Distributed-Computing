@@ -33,6 +33,8 @@ public enum MessageType {
 		
 		// Misc.
 		PRINT_STATE,
+		GIVE_COORDINATOR,
+		COORDINATOR_NO,
 		
 		//To kill any process
 		DIE,

@@ -57,6 +57,8 @@ public class Process {
 	//// VARIABLES FOR INTERACTION WITH THE SYSTEM ////
 	static int delay;
 	
+	boolean isAnyWhereCoordinatorSelectedPostRecoveryOfPRocess_0;
+	
 	// We have to die after getting n messages from P.
 	// P=key, and n=messages.
 	Hashtable<Integer,Integer> deathAfter = new Hashtable<Integer, Integer>();
@@ -368,7 +370,23 @@ public class Process {
 		    					dtLogger.write(activeTransaction.getState(), activeTransaction.command);
 		    					System.exit(1);
 		    				}
-		    				
+		    				case GIVE_COORDINATOR: {
+		    					config.logger.info("Received: " + message.toString());
+		    					String to_return = "false";
+		    					if (coordinatorProcessNumber == processId) {
+		    						to_return = "true";
+		    					}
+		    					Message co_msg = new Message(processId, MessageType.COORDINATOR_NO, to_return);
+		    					config.logger.info("Sending: " + co_msg);
+		    					controller.sendMsg(message.process_id, co_msg.toString());
+		    					break;
+		    				}
+		    				case COORDINATOR_NO: {
+		    					//isAnyWhereCoordinatorSelectedPostRecoveryOfPRocess_0
+		    					if (message.payLoad.trim().equals("true")) {
+		    						isAnyWhereCoordinatorSelectedPostRecoveryOfPRocess_0 = true;
+		    					}
+		    				}
 		    			}
 	        		}
 	        	}
@@ -463,6 +481,30 @@ public class Process {
 			
 			StateRecovery.updateStateFile(this);
 		}
+		
+		if ((activeTransaction instanceof RecoveryTransaction) && processId == 0) {
+			//isAnyWhereCoordinatorSelectedPostRecoveryOfPRocess_0
+			Message msg = new Message(processId, MessageType.GIVE_COORDINATOR, "-");
+			controller.sendMsgs(upProcess.keySet(), msg.toString(), -1);
+			
+			Thread th = new Thread() {
+				public void run() {
+					try {
+						Thread.sleep(2000);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					
+					if (!isAnyWhereCoordinatorSelectedPostRecoveryOfPRocess_0) {
+						coordinatorProcessNumber = 0;
+					}
+				}
+			};
+			
+			th.start();
+		}
+		
 		// Store your state in the prevTransactionState variable and get ready for the new transaction.
 		prevTransactionState = activeTransaction.state;
 		config.logger.info("Transaction is complete. State: " + activeTransaction.state);
