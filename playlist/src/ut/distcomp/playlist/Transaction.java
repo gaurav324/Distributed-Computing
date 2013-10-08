@@ -228,7 +228,7 @@ public class Transaction implements Runnable {
                 Thread th = new Thread() {
                         public void run() {
                                 try {
-                                        Thread.sleep(DECISION_TIMEOUT);
+                                        Thread.sleep(DECISION_TIMEOUT * 2);
                                 } catch (InterruptedException e) {
                                         // TODO Auto-generated catch block
                                         e.printStackTrace();
@@ -279,7 +279,7 @@ public class Transaction implements Runnable {
 					public void run() {
 						try {
 							// Increasing this time because Coordinator might have had to send to uncertain process also.
-							Thread.sleep(DECISION_TIMEOUT * 2); 
+							Thread.sleep(DECISION_TIMEOUT * 3); 
 						} catch (InterruptedException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
