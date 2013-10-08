@@ -212,7 +212,8 @@ if __name__ == "__main__":
         proc[0].kill()
 
         # Let us restart the coordinator in 40 sec.
-        time.sleep(40)
+        time.sleep(30)
+	print "Starting coordinator again to Recover."
         command = execute_command % {'root' : opts.root, 
                                      'process_no' : 0,
                                      'delay' : str(int(opts.delay) * 1000),
@@ -254,6 +255,7 @@ if __name__ == "__main__":
 
         # Let us restart the coordinator in 30 sec.
         time.sleep(30)
+	print "Let us start Coordinator again to Recover."
         command = execute_command % {'root' : opts.root, 
                                      'process_no' : 0,
                                      'delay' : str(int(opts.delay) * 1000),
@@ -376,6 +378,7 @@ if __name__ == "__main__":
 
         # Restart the coordinator after 60 secs.
         time.sleep(30)
+	print "Restarting the Coordinator to recover"
         command = execute_command % {'root' : opts.root, 
                                      'process_no' : 0,
                                      'delay' : str(int(opts.delay) * 1000),
