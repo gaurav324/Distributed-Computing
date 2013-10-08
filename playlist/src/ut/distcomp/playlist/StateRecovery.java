@@ -62,7 +62,7 @@ public class StateRecovery {
 			temp = (Hashtable<String, String>) oos.readObject();
 			oos.close();
 		} catch (Exception e) {
-			e.printStackTrace();
+			// Doing nothing here.
 		}
 		
 		if (temp == null) {

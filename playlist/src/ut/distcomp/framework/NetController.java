@@ -54,15 +54,25 @@ public class NetController {
 	}
 	
 	public synchronized void sendMsgs(Set<Integer> processes, String msg, int partial_count) {
-		int i = 0;
-		for(Integer processNo: processes) {
-			if (partial_count != -1 && i >= partial_count) {
+		for(Integer processNo: processes) {	
+			
+			if (partial_count == -1) {
+				config.logger.info("Sending: " + msg + " to " + processNo);
+				sendMsg(processNo, msg);
+			}
+			
+			if (partial_count != -1 && processNo == partial_count) {
+				config.logger.info("Sending: " + msg + " to " + processNo);
+				sendMsg(processNo, msg);
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				config.logger.warning("Killing myself.");
 				System.exit(1);
-			}
-			config.logger.info("Sending: " + msg + " to " + processNo);
-			sendMsg(processNo, msg);
-			i++;
+			} 
 		}
 	}
 	

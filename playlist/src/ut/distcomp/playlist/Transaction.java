@@ -195,57 +195,55 @@ public class Transaction implements Runnable {
 
 	private void electCordinator() {
 		stateRequestReceived = false;
-		boolean nextChoosen = false;
-		
-		int nextCoordinator = (process.coordinatorProcessNumber + 1 ) % process.config.numProcesses;
-		process.config.logger.info("As per round robin, Selecting: " + nextCoordinator);
-		while(!nextChoosen) {
-			if (nextCoordinator != process.processId) {
-				if (process.upProcess.keySet().contains(nextCoordinator)) {
-					nextChoosen = true;
-				} else {
-					process.config.logger.info("Discarding: " + nextCoordinator + ", as it is down.");
-					nextCoordinator = (nextCoordinator + 1) % process.config.numProcesses;
-				}
-			} else {
-				nextChoosen = true;
-			}
-		}
-		
-		process.config.logger.info("Elected new coordinator: " + nextCoordinator);
-		
-		// Sending UR_SELECTED message to the new coordinator.
-		// Send a message to the new coordinator that he is the new coordinator.
-		// I would send the message to myself also, if I am the new coordinator.
-		Message msg = new Message(process.processId, MessageType.UR_SELECTED, command);
-		Process.waitTillDelay();
-		process.config.logger.info("Sending: " + msg + " to: " + nextCoordinator);
-		process.controller.sendMsg(nextCoordinator, msg.toString());
-		
-		// If I am not the elected coordinator then update the new coordinator number.
-		if (nextCoordinator != process.processId) {
-			process.coordinatorProcessNumber = nextCoordinator;
-			
-			// Start waiting for the new STATE_REQ message.
-			Thread th = new Thread() {
-				public void run() {
-					try {
-						Thread.sleep(DECISION_TIMEOUT);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					if (!stateRequestReceived) {
-						lock.lock();
-						process.config.logger.info("Going to reelect the cordinator because did not get any state Request.");
-						electCordinator();
-						lock.unlock();
-					}
-				}
-			};
-			
-			th.start();
-		}
+        Integer[] keys = (Integer[]) process.upProcess.keySet().toArray(new Integer[0]);
+        Arrays.sort(keys);
+        
+        if (keys[0] > process.processId) {
+        	keys[0] = process.processId;
+        }
+        
+        int temp = process.coordinatorProcessNumber;
+        while((keys[0] - temp) > 1)
+        {
+        	temp = temp + 1;
+        	process.config.logger.info("As per round robin, Selecting: " + temp);
+        	process.config.logger.info("Discarding: " + temp + ", as it is down.");
+        }
+        
+        process.config.logger.info("Elected new coordinator: " + keys[0]);
+        
+        // Sending UR_SELECTED message to the new coordinator.
+        // Send a message to the new coordinator that he is the new coordinator.
+        // I would send the message to myself also, if I am the new coordinator.
+        Message msg = new Message(process.processId, MessageType.UR_SELECTED, command);
+        Process.waitTillDelay();
+        process.config.logger.info("Sending: " + msg + " to: " + keys[0]);
+        process.controller.sendMsg(keys[0], msg.toString());
+        
+        // If I am not the elected coordinator then update the new coordinator number.
+        if (keys[0] != process.processId) {
+                process.coordinatorProcessNumber = keys[0];
+                
+                // Start waiting for the new STATE_REQ message.
+                Thread th = new Thread() {
+                        public void run() {
+                                try {
+                                        Thread.sleep(DECISION_TIMEOUT);
+                                } catch (InterruptedException e) {
+                                        // TODO Auto-generated catch block
+                                        e.printStackTrace();
+                                }
+                                if (!stateRequestReceived) {
+                                        lock.lock();
+                                        process.config.logger.info("Going to reelect the cordinator because did not get any state Request.");
+                                        electCordinator();
+                                        lock.unlock();
+                                }
+                        }
+                };
+                
+                th.start();
+        }
 	}
 	
 	public void enforceStop() {
