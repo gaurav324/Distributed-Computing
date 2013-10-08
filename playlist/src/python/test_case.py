@@ -99,6 +99,10 @@ def getopts():
                       help="This would kill the first coordinator after the first X commits.",
                       default=-1
                      )
+    parser.add_option("--extra_credit",
+		      help="This would set extra_credit flag to kill coordinator after recording commit but before sending and all process die.",
+		      default=-1
+		     )
     parser.add_option("--demo",
                       help="""0. Everything worlks fine.
                               1. PARTICIPANT FAILURE AND RECOVERY. BEFORE SENDING YES/NO.
@@ -108,6 +112,7 @@ def getopts():
                               5. Partial PreCommit.
                               6. Partial Commit.
                               7. Extra Credit Error.
+			      8. Future coordinator Kill
                            """)
 
     opts,args = parser.parse_args()
@@ -377,6 +382,36 @@ if __name__ == "__main__":
                 print "Going to execute: ", command
                 args = shlex.split(command)
                 process_no_pid_map[i] = subprocess.Popen(args);  
-    
+       
+    # Future Coordinator Failure.
+    if (opts.demo == str(8)):
+        print "We would start a transaction and then kill the future coordinator to be elected and then the present coordinator.\n"
+        print "Please monitor logs\n"
+
+	opts.extra_credit = -1
+
+        # A list of processes is here.
+        proc, conn = start_process(opts, args)
+ 
+        time.sleep(5)
+        conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
+
+        # Waiting for coordinator to dispatch vote-request.
+        time.sleep(delay + 1)
+
+        # Kill the coordinator.
+        print "Killing the future coordinator."
+        proc[1].kill()
+
+        # Sleeping before killing present coordinator.
+        time.sleep(1)
+        proc[0].kill()
+
+        # Waiting until normal process time-out on pre-commit/abort message.
+        time.sleep(delay + 2)
+
+        # Someone would elect a new co-ordinator and inform him. Would wait so that it dispatches # the UR_SELECTED message.
+        time.sleep(delay + 1)
+
     from IPython import embed
     embed()
