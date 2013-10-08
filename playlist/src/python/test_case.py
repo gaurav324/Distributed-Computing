@@ -133,6 +133,7 @@ def getopts():
                               5. Partial PreCommit.
                               6. Partial Commit.
                               7. Extra Credit Error.
+			      8. Future Coordinator Failure.
                            """)
 
     opts,args = parser.parse_args()
@@ -211,7 +212,8 @@ if __name__ == "__main__":
         proc[0].kill()
 
         # Let us restart the coordinator in 40 sec.
-        time.sleep(40)
+        time.sleep(30)
+	print "Starting coordinator again to Recover."
         command = execute_command % {'root' : opts.root, 
                                      'process_no' : 0,
                                      'delay' : str(int(opts.delay) * 1000),
@@ -253,6 +255,7 @@ if __name__ == "__main__":
 
         # Let us restart the coordinator in 30 sec.
         time.sleep(30)
+	print "Let us start Coordinator again to Recover."
         command = execute_command % {'root' : opts.root, 
                                      'process_no' : 0,
                                      'delay' : str(int(opts.delay) * 1000),
@@ -375,6 +378,7 @@ if __name__ == "__main__":
 
         # Restart the coordinator after 60 secs.
         time.sleep(30)
+	print "Restarting the Coordinator to recover"
         command = execute_command % {'root' : opts.root, 
                                      'process_no' : 0,
                                      'delay' : str(int(opts.delay) * 1000),
@@ -423,6 +427,37 @@ if __name__ == "__main__":
                 print "Going to execute: ", command
                 args = shlex.split(command)
                 process_no_pid_map[i] = subprocess.Popen(args);  
+
+    # Future Coordinator Failure.
+    if (opts.demo == str(8)):
+        print "We would start a transaction and then kill the future coordinator to be elected and then the present coordinator.\n"
+        print "Please monitor logs\n"
+
+
+        # A list of processes is here.
+        proc, conn = start_process(opts, args)
+ 
+        time.sleep(5)
+        conn[0].send("11--ADD--tumhiho=http://Aashiqui&")
+
+        # Waiting for coordinator to dispatch vote-request.
+        time.sleep(delay + 1)
+
+        # Kill the coordinator.
+        print "Killing the future coordinator."
+        proc[1].kill()
+
+        # Sleeping before killing present coordinator.
+        time.sleep(1)
+        proc[0].kill()
+
+        # Waiting until normal process time-out on pre-commit/abort message.
+        time.sleep(delay + 2)
+
+        # Someone would elect a new co-ordinator and inform him. Would wait so that it dispatches # the UR_SELECTED message.
+        time.sleep(delay + 1)
+
+	
     
     from IPython import embed
     embed()
