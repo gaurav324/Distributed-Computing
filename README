@@ -1,0 +1,11 @@
+This project is done is a part of the CS 380D Distributed computing course taught by Dr. ALivisi Lorenzo and
+aims at building a distributed playlist using JAVA. 
+
+1. Atomic commit protocol used here is 3-Phase commit. 
+2. We also implement state recovery, including total failures.
+
+We have included a python script, which can be used to interact with the playlist servers. 
+One can configure the server list using config.properties files.
+
+Cheers !!
+Gaurav Nanda
