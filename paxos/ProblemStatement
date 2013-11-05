@@ -1,0 +1,28 @@
+1. Implement a simple replicated bank application.
+The bank service maintains a set of client
+records, a set of accounts (a client can have zero
+or more accounts), and operations such as deposit,
+withdraw, transfer, inquiry.
+
+2. Implement the failure detection scheme of Section
+3 so that most of the time only one leader
+is active.
+
+3.Produce a scenario where the proposed solution allows a read operation 
+to return stale data (i.e. return a value that has been already overwritten). 
+You should provide a detailed description of an execution that can cause the 
+issue and submit it in a document at the time your project is due.
+
+4. Design a solution for the problem, and provide an implementation of the 
+solution. Devise a demo to prove that your solution achieves the correct result.
+
+Notes:
+
+1. Show that state machine is taking unexpected time to transition?
+    - Some kind of random or something has to be introduced.
+2. This is a asynchronous environment, how would you show that there is crash failure? 
+    - How to detect that kind of failure and how to simulate that environment?
+3. What about clients?
+    - Can either be in java or python.
+    - Each would have on clientId and commandIdentifier for each command they send.
+    
