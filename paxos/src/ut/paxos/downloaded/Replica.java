@@ -28,6 +28,8 @@ public class Replica extends Process {
 			for (int s = 1;; s++) {
 				if (!proposals.containsKey(s) && !decisions.containsKey(s)) {
 					proposals.put(s, c);
+					Message msg = (Message)c.op;
+					System.out.println( me + "|| SLOT: " + slot_num + " || " + "proposing: " + msg.type + "--" + msg.payLoad);
 					for (ProcessId ldr: leaders) {
 						sendMessage(ldr, new ProposeMessage(me, s, c));
 					}
@@ -46,7 +48,7 @@ public class Replica extends Process {
 		}
 		Message msg = (Message)c.op;
 		try {
-			System.out.println("" + me + ": perform " + msg.payLoad);
+			System.out.println( me + " || SLOT: " + slot_num + " || " + "performing: " + msg.type + "--" + msg.payLoad);
 			
 			Client x = this.appState.clients.get(msg.clientName);
 			if (x == null) {
@@ -103,6 +105,7 @@ public class Replica extends Process {
 					}
 					c.out.println(me + " : " + acc.inquiry());
 					System.out.println(acc.inquiry());
+					System.out.println(this.proposals.toString());
 					break;
 			}
 			c.out.flush();

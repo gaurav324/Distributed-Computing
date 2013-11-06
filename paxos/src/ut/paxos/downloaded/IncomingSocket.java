@@ -85,7 +85,7 @@ public class IncomingSocket extends Thread {
 									Thread.sleep(delay);
 								}
 								sendMessage(replicas[r],
-										new RequestMessage(pid, new Command(pid, out, msg)));	
+										new RequestMessage(pid, new Command(out, cid, msg)));	
 							}
 							cid += 1;
 						}catch(Exception ex) {
