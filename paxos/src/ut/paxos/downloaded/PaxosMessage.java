@@ -1,3 +1,6 @@
+package ut.paxos.downloaded;
+import java.io.BufferedOutputStream;
+import java.io.OutputStream;
 import java.util.*;
 
 public class PaxosMessage {
@@ -43,7 +46,7 @@ class DecisionMessage extends PaxosMessage {
 class RequestMessage extends PaxosMessage {
 	Command command;
 	public RequestMessage(ProcessId src, Command command){
-		this.src = src; this.command = command;
+		this.src = src ; this.command = command;
 }	}
 class ProposeMessage extends PaxosMessage {
 	int slot_number; Command command;

@@ -1,3 +1,4 @@
+package ut.paxos.downloaded;
 import java.util.*;
 
 public class Scout extends Process {

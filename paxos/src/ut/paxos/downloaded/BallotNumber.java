@@ -1,3 +1,4 @@
+package ut.paxos.downloaded;
 public class BallotNumber implements Comparable {
 	int round;
 	ProcessId leader_id;

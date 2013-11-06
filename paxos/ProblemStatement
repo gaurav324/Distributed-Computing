@@ -1,17 +1,11 @@
-1. Implement a simple replicated bank application.
-The bank service maintains a set of client
-records, a set of accounts (a client can have zero
-or more accounts), and operations such as deposit,
-withdraw, transfer, inquiry.
+Problem Statements
 
-2. Implement the failure detection scheme of Section
-3 so that most of the time only one leader
-is active.
+1. Implement a simple replicated bank application.The bank service maintains a set of client
+records, a set of accounts (a client can have zero or more accounts), and operations such as deposit, withdraw, transfer, inquiry.
 
-3.Produce a scenario where the proposed solution allows a read operation 
-to return stale data (i.e. return a value that has been already overwritten). 
-You should provide a detailed description of an execution that can cause the 
-issue and submit it in a document at the time your project is due.
+2. Implement the failure detection scheme of Section 3 so that most of the time only one leader is active.
+
+3.Produce a scenario where the proposed solution allows a read operation to return stale data (i.e. return a value that has been already overwritten). You should provide a detailed description of an execution that can cause the issue and submit it in a document at the time your project is due.
 
 4. Design a solution for the problem, and provide an implementation of the 
 solution. Devise a demo to prove that your solution achieves the correct result.
@@ -25,4 +19,7 @@ Notes:
 3. What about clients?
     - Can either be in java or python.
     - Each would have on clientId and commandIdentifier for each command they send.
-    
+   - Client will have to use some stub routine(API), which knows all the machines and send commands to each of the machines in the replicated environment. Some of the machines might be dead, but that is ok, client would never come to know about that fact.
+   - Notion of multiple clients is very important, because then only there can exist inconsistencies in the order in which commands are processed. Lets say that there are two clients A and B, A sends a command Add(100) and then B sends Subtract(100). Will state machine always have to perform A first and B second or it could be other way also (However, all the states would do it consistently).
+4. Make the number of acceptors, replicas and leaders to be configurable.
+5. 

@@ -1,3 +1,4 @@
+package ut.paxos.downloaded;
 public class PValue {
 	BallotNumber ballot_number;
 	int slot_number;
