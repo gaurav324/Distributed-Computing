@@ -6,10 +6,11 @@ public class Leader extends Process {
 	ProcessId[] replicas;
 	BallotNumber ballot_number;
 	boolean active = false;
+	String PingPong;
 	Map<Integer, Command> proposals = new HashMap<Integer, Command>();
 
 	public Leader(Env env, ProcessId me, ProcessId[] acceptors,
-										ProcessId[] replicas, String logFolder) {
+										ProcessId[] replicas, String logFolder, String PingPong) {
 		super(logFolder, env, me, null);
 		ballot_number = new BallotNumber(0, me);
 		this.acceptors = acceptors;

@@ -62,9 +62,12 @@ public class Env {
 			myLeader = replicaLeaderMap.get(i);
 			Replica repl = new Replica(this, appState, replicas[i], leaders, logFolder, myLeader);
 		}
+		
+		String PingPong = prop.getProperty("PingPong");
+		
 		for (int i = 0; i < nLeaders; i++) {
 			leaders[i] = new ProcessId("leader_" + i);
-			Leader leader = new Leader(this, leaders[i], acceptors, replicas, logFolder);
+			Leader leader = new Leader(this, leaders[i], acceptors, replicas, logFolder, PingPong);
 		}
 	}
 
