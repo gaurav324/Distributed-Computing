@@ -1,6 +1,9 @@
 package ut.paxos.downloaded;
 
 import java.io.IOException;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Handler;
@@ -16,6 +19,10 @@ public class Process extends Thread {
 	
 	protected Logger logger;
 	protected String logFolder;
+	
+	public static final Lock pingPongLock = new ReentrantLock();
+	public static final Condition pingPongCondition = pingPongLock.newCondition();
+	
 	public Process(String logFolder, Env env, ProcessId me, Logger xlogger) {
 		this.logFolder = logFolder;
 		this.env = env;

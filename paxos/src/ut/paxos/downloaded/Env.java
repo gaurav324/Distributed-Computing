@@ -49,12 +49,13 @@ public class Env {
 	
 		String replicaLeaderString = prop.getProperty("replicaLeader");
 		HashMap<Integer, Integer> replicaLeaderMap = new HashMap<Integer, Integer>();
-		String[] xx = replicaLeaderString.split(",");
-		for (String x : xx) {
-			String[] replicaLeader = x.split("-");
-			replicaLeaderMap.put(Integer.parseInt(replicaLeader[0]), Integer.parseInt(replicaLeader[1]));
+		if(replicaLeaderString!=null) {
+			String[] xx = replicaLeaderString.split(",");
+			for (String x : xx) {
+				String[] replicaLeader = x.split("-");
+				replicaLeaderMap.put(Integer.parseInt(replicaLeader[0]), Integer.parseInt(replicaLeader[1]));
+			}
 		}
-		
 		for (int i = 0; i < nReplicas; i++) {
 			replicas[i] = new ProcessId("replica_" + i);
 			State appState = new State(args[0]);
@@ -63,11 +64,18 @@ public class Env {
 			Replica repl = new Replica(this, appState, replicas[i], leaders, logFolder, myLeader);
 		}
 		
-		String PingPong = prop.getProperty("PingPong");
+		String pingPong = prop.getProperty("PingPong");
+		if (pingPong == null) {
+			pingPong = "false";
+		}
+		String failureDetection = prop.getProperty("failureDetection");
+		if (failureDetection == null) {
+			failureDetection = "false";
+		}
 		
 		for (int i = 0; i < nLeaders; i++) {
 			leaders[i] = new ProcessId("leader_" + i);
-			Leader leader = new Leader(this, leaders[i], acceptors, replicas, logFolder, PingPong);
+			Leader leader = new Leader(this, leaders[i], acceptors, replicas, leaders, logFolder, pingPong, failureDetection);
 		}
 	}
 

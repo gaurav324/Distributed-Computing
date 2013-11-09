@@ -53,3 +53,15 @@ class ProposeMessage extends PaxosMessage {
 	public ProposeMessage(ProcessId src, int slot_number, Command command){
 		this.src = src; this.slot_number = slot_number; this.command = command;
 }	}
+
+class RequestHeartBeat extends PaxosMessage {
+	public RequestHeartBeat(ProcessId src) {
+		this.src = src;
+	}
+}
+
+class HeartBeat extends PaxosMessage {
+	public HeartBeat(ProcessId src) {
+		this.src = src;
+	}
+}
