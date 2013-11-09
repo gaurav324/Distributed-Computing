@@ -20,11 +20,16 @@ public class Replica extends Process {
 	Map<Integer /* slot number */, Command> proposals = new HashMap<Integer, Command>();
 	Map<Integer /* slot number */, Command> decisions = new HashMap<Integer, Command>();
 
-	public Replica(Env env, ut.paxos.bank.State appState, ProcessId me, ProcessId[] leaders, String logFolder) {
+	// Testing variables.
+	Integer myLeader;
+	public Replica(Env env, ut.paxos.bank.State appState, ProcessId me, ProcessId[] leaders, String logFolder,
+			Integer myLeader) {
 		super(logFolder, env, me, null);
 		this.appState = appState;
 		this.leaders = leaders;
 		env.addProc(me, this);
+		
+		this.myLeader = myLeader;
 	}
 
 	void propose(Command c){
@@ -36,7 +41,9 @@ public class Replica extends Process {
 					System.out.println(me + "|| SLOT: " + s + " || " + "proposing: " + msg.type + "--" + msg.payLoad);
 					logger.info(me + "|| SLOT: " + s + " || " + "proposing: " + msg.type + "--" + msg.payLoad);
 					for (ProcessId ldr: leaders) {
-						sendMessage(ldr, new ProposeMessage(me, s, c));
+						if (ldr.name.equals("leader_" + myLeader) || myLeader == null) {
+							sendMessage(ldr, new ProposeMessage(me, s, c));
+						}
 					}
 					break;
 				}

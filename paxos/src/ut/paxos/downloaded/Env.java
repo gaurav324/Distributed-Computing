@@ -16,7 +16,8 @@ public class Env {
 	public static ProcessId[] leaders;
 	
 	public static String logFolder;
-
+	public static Properties prop = new Properties();
+	
 	public static ArrayList<IncomingSocket> socketList = new ArrayList<IncomingSocket>();
 			
     synchronized void sendMessage(ProcessId dst, PaxosMessage msg){
@@ -41,16 +42,28 @@ public class Env {
 		leaders = new ProcessId[nLeaders];
 
 		for (int i = 0; i < nAcceptors; i++) {
-			acceptors[i] = new ProcessId("acceptor:" + i);
+			acceptors[i] = new ProcessId("acceptor_" + i);
 			Acceptor acc = new Acceptor(this, acceptors[i], logFolder);
 		}
+		
+	
+		String replicaLeaderString = prop.getProperty("replicaLeader");
+		HashMap<Integer, Integer> replicaLeaderMap = new HashMap<Integer, Integer>();
+		String[] xx = replicaLeaderString.split(",");
+		for (String x : xx) {
+			String[] replicaLeader = x.split("-");
+			replicaLeaderMap.put(Integer.parseInt(replicaLeader[0]), Integer.parseInt(replicaLeader[1]));
+		}
+		
 		for (int i = 0; i < nReplicas; i++) {
-			replicas[i] = new ProcessId("replica:" + i);
+			replicas[i] = new ProcessId("replica_" + i);
 			State appState = new State(args[0]);
-			Replica repl = new Replica(this, appState, replicas[i], leaders, logFolder);
+			Integer myLeader = null;
+			myLeader = replicaLeaderMap.get(i);
+			Replica repl = new Replica(this, appState, replicas[i], leaders, logFolder, myLeader);
 		}
 		for (int i = 0; i < nLeaders; i++) {
-			leaders[i] = new ProcessId("leader:" + i);
+			leaders[i] = new ProcessId("leader_" + i);
 			Leader leader = new Leader(this, leaders[i], acceptors, replicas, logFolder);
 		}
 	}
@@ -60,7 +73,7 @@ public class Env {
 	}
 	
 	public static void main(String[] args) throws FileNotFoundException, IOException{
-		Properties prop = new Properties();
+		
 		prop.load(new FileInputStream(args[0]));
 		
 		nAcceptors = loadInt(prop, "Acceptors");
