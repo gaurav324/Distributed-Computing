@@ -1,5 +1,6 @@
 package ut.paxos.downloaded;
 import java.util.*;
+import java.util.logging.Logger;
 
 public class Commander extends Process {
 	ProcessId leader;
@@ -9,9 +10,8 @@ public class Commander extends Process {
 	Command command;
 
 	public Commander(Env env, ProcessId me, ProcessId leader, ProcessId[] acceptors,
-			ProcessId[] replicas, BallotNumber ballot_number, int slot_number, Command command){
-		this.env = env;
-		this.me = me;
+			ProcessId[] replicas, BallotNumber ballot_number, int slot_number, Command command, String logFolder, Logger logger) {
+		super(logFolder, env, me, logger);
 		this.acceptors = acceptors;
 		this.replicas = replicas;
 		this.leader = leader;

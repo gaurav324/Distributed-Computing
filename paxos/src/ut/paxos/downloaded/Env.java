@@ -1,5 +1,6 @@
 package ut.paxos.downloaded;
 
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -9,10 +10,12 @@ import ut.paxos.bank.State;
 
 public class Env {
 	static Map<ProcessId, Process> procs = new HashMap<ProcessId, Process>();
-	public final static int nAcceptors = 3, nReplicas = 8, nLeaders = 2, nRequests = 10;
+	public static int nAcceptors = 3, nReplicas = 3, nLeaders = 2, nRequests = 10;
 	public static ProcessId[] acceptors;
 	public static ProcessId[] replicas;
 	public static ProcessId[] leaders;
+	
+	public static String logFolder;
 
 	public static ArrayList<IncomingSocket> socketList = new ArrayList<IncomingSocket>();
 			
@@ -39,28 +42,32 @@ public class Env {
 
 		for (int i = 0; i < nAcceptors; i++) {
 			acceptors[i] = new ProcessId("acceptor:" + i);
-			Acceptor acc = new Acceptor(this, acceptors[i]);
+			Acceptor acc = new Acceptor(this, acceptors[i], logFolder);
 		}
 		for (int i = 0; i < nReplicas; i++) {
 			replicas[i] = new ProcessId("replica:" + i);
 			State appState = new State(args[0]);
-			Replica repl = new Replica(this, appState, replicas[i], leaders);
+			Replica repl = new Replica(this, appState, replicas[i], leaders, logFolder);
 		}
 		for (int i = 0; i < nLeaders; i++) {
 			leaders[i] = new ProcessId("leader:" + i);
-			Leader leader = new Leader(this, leaders[i], acceptors, replicas);
+			Leader leader = new Leader(this, leaders[i], acceptors, replicas, logFolder);
 		}
-
-//		for (int i = 1; i < nRequests; i++) {
-//			ProcessId pid = new ProcessId("client:" + i);
-//			for (int r = 0; r < nReplicas; r++) {
-//				sendMessage(replicas[r],
-//					new RequestMessage(pid, new Command(pid, 0, "operation " + i)));
-//			}
-//		}
 	}
 
+	private static int loadInt(Properties prop, String s) {
+		return Integer.parseInt(prop.getProperty(s.trim()));
+	}
+	
 	public static void main(String[] args) throws FileNotFoundException, IOException{
+		Properties prop = new Properties();
+		prop.load(new FileInputStream(args[0]));
+		
+		nAcceptors = loadInt(prop, "Acceptors");
+		nReplicas = loadInt(prop, "Replicas");
+		nLeaders = loadInt(prop, "Leaders");
+		logFolder = prop.getProperty("LOG_FOLDER");
+		
 		new Env().run(args);
 		
 		// Start server on the given port.

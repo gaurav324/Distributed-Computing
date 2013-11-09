@@ -9,9 +9,8 @@ public class Leader extends Process {
 	Map<Integer, Command> proposals = new HashMap<Integer, Command>();
 
 	public Leader(Env env, ProcessId me, ProcessId[] acceptors,
-										ProcessId[] replicas){
-		this.env = env;
-		this.me = me;
+										ProcessId[] replicas, String logFolder) {
+		super(logFolder, env, me, null);
 		ballot_number = new BallotNumber(0, me);
 		this.acceptors = acceptors;
 		this.replicas = replicas;
@@ -22,7 +21,7 @@ public class Leader extends Process {
 		System.out.println("Here I am: " + me);
 
 		new Scout(env, new ProcessId("scout:" + me + ":" + ballot_number),
-			me, acceptors, ballot_number);
+			me, acceptors, ballot_number, logFolder, logger);
 		for (;;) {
 			PaxosMessage msg = getNextMessage();
 
@@ -33,7 +32,7 @@ public class Leader extends Process {
 					if (active) {
 						new Commander(env,
 							new ProcessId("commander:" + me + ":" + ballot_number + ":" + m.slot_number),
-							me, acceptors, replicas, ballot_number, m.slot_number, m.command);
+							me, acceptors, replicas, ballot_number, m.slot_number, m.command, logFolder, logger);
 					}
 				}
 			}
@@ -69,7 +68,7 @@ public class Leader extends Process {
 					for (int sn : proposals.keySet()) {
 						new Commander(env,
 							new ProcessId("commander:" + me + ":" + ballot_number + ":" + sn),
-							me, acceptors, replicas, ballot_number, sn, proposals.get(sn));
+							me, acceptors, replicas, ballot_number, sn, proposals.get(sn), logFolder, logger);
 					}
 					active = true;
 				}
@@ -80,7 +79,7 @@ public class Leader extends Process {
 				if (ballot_number.compareTo(m.ballot_number) < 0) {
 					ballot_number = new BallotNumber(m.ballot_number.round + 1, me);
 					new Scout(env, new ProcessId("scout:" + me + ":" + ballot_number),
-						me, acceptors, ballot_number);
+						me, acceptors, ballot_number, logFolder, logger);
 					active = false;
 				}
 			}

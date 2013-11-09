@@ -5,7 +5,8 @@ public class Acceptor extends Process {
 	BallotNumber ballot_number = null;
 	Set<PValue> accepted = new HashSet<PValue>();
 
-	public Acceptor(Env env, ProcessId me){
+	public Acceptor(Env env, ProcessId me, String logFolder) {
+		super(logFolder, env, me, null);
 		this.env = env;
 		this.me = me;
 		env.addProc(me, this);

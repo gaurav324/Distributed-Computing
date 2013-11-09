@@ -1,12 +1,17 @@
 package ut.paxos.downloaded;
 
+import java.io.IOException;
 import java.util.*;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 import ut.paxos.bank.Account;
 import ut.paxos.bank.Client;
 import ut.paxos.bank.Message;
 import ut.paxos.bank.State;
-
 
 public class Replica extends Process {
 	public ut.paxos.bank.State appState;
@@ -15,10 +20,9 @@ public class Replica extends Process {
 	Map<Integer /* slot number */, Command> proposals = new HashMap<Integer, Command>();
 	Map<Integer /* slot number */, Command> decisions = new HashMap<Integer, Command>();
 
-	public Replica(Env env, ut.paxos.bank.State appState, ProcessId me, ProcessId[] leaders){
-		this.env = env;
+	public Replica(Env env, ut.paxos.bank.State appState, ProcessId me, ProcessId[] leaders, String logFolder) {
+		super(logFolder, env, me, null);
 		this.appState = appState;
-		this.me = me;
 		this.leaders = leaders;
 		env.addProc(me, this);
 	}
@@ -29,7 +33,8 @@ public class Replica extends Process {
 				if (!proposals.containsKey(s) && !decisions.containsKey(s)) {
 					proposals.put(s, c);
 					Message msg = (Message)c.op;
-					System.out.println( me + "|| SLOT: " + slot_num + " || " + "proposing: " + msg.type + "--" + msg.payLoad);
+					System.out.println(me + "|| SLOT: " + s + " || " + "proposing: " + msg.type + "--" + msg.payLoad);
+					logger.info(me + "|| SLOT: " + s + " || " + "proposing: " + msg.type + "--" + msg.payLoad);
 					for (ProcessId ldr: leaders) {
 						sendMessage(ldr, new ProposeMessage(me, s, c));
 					}
@@ -63,23 +68,25 @@ public class Replica extends Process {
 			switch(msg.type) {
 				case DEPOSIT:
 					if (msgSplit.length != 2) {
-						c.out.println("Not a valid command: " + msg.toString());
+						c.client.callBack(c, "Not a valid command: " + msg.toString());
 						System.out.println("Not a valid command: " + msg.toString());
 						break;
 					}
 					acc.deposit(Double.parseDouble(msgSplit[1]));
+					c.client.callBack(c, me + " || Deposited: " + msgSplit[1]);
 					break;
 				case WITHDRAW:
 					if (msgSplit.length != 2) {
-						c.out.println("Not a valid command: " + msg.toString());
+						c.client.callBack(c, "Not a valid command: " + msg.toString());
 						System.out.println("Not a valid command: " + msg.toString());
 						break;
 					}
 					acc.withDraw(Double.parseDouble(msgSplit[1]));
+					c.client.callBack(c, me + " || Withdrew: " + msgSplit[1]);
 					break;
 				case TRANSFER:
 					if (msgSplit.length != 4) {
-						c.out.println("Not a valid command: " + msg.toString());
+						c.client.callBack(c, "Not a valid command: " + msg.toString());
 						System.out.println("Not a valid command: " + msg.toString());
 						break;
 					}
@@ -87,7 +94,7 @@ public class Replica extends Process {
 					int toAccNumber = Integer.parseInt(msgSplit[2]);
 					Client toClient = this.appState.clients.get(toClientString);
 					if (toClient == null) {
-						c.out.println("Not a valid client: " + toClientString);
+						c.client.callBack(c, "Not a valid client: " + toClientString);
 						System.out.println("Not a valid client: " + toClientString);
 						break;
 					}
@@ -96,39 +103,26 @@ public class Replica extends Process {
 						throw new Exception("Not a valid account number " + toAccount + " for client: " + toClientString);
 					}
 					acc.transfer(toAccount, Double.parseDouble(msgSplit[3]));
+					c.client.callBack(c, me + " || Transfered: " + msgSplit[3] + " to " + toClientString + ":" + toAccNumber);
 					break;
 				case INQUIRY:
 					if (msgSplit.length != 1) {
-						c.out.println("Not a valid command: " + msg.toString());
+						c.client.callBack(c, "Not a valid command: " + msg.toString());
 						System.out.println("Not a valid command: " + msg.toString());
 						break;
 					}
-					c.out.println(me + " : " + acc.inquiry());
+					c.client.callBack(c, me + " : " + acc.inquiry());
 					System.out.println(acc.inquiry());
 					System.out.println(this.proposals.toString());
 					break;
 			}
-			c.out.flush();
 		} catch(Exception ex) {
-			c.out.println(ex.getMessage());
+			c.client.callBack(c, ex.getMessage());
 			ex.printStackTrace();
 		}
 		
 		slot_num++;
 	}
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 	public void body(){
 		System.out.println("Here I am: " + me);

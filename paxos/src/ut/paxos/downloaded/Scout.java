@@ -1,5 +1,6 @@
 package ut.paxos.downloaded;
 import java.util.*;
+import java.util.logging.Logger;
 
 public class Scout extends Process {
 	ProcessId leader;
@@ -7,9 +8,8 @@ public class Scout extends Process {
 	BallotNumber ballot_number;
 
 	public Scout(Env env, ProcessId me, ProcessId leader,
-			ProcessId[] acceptors, BallotNumber ballot_number){
-		this.env = env;
-		this.me = me;
+			ProcessId[] acceptors, BallotNumber ballot_number, String logFolder, Logger logger) {
+		super(logFolder, env, me, logger);
 		this.acceptors = acceptors;
 		this.leader = leader;
 		this.ballot_number = ballot_number;
