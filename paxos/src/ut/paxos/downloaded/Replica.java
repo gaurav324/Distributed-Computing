@@ -39,7 +39,6 @@ public class Replica extends Process {
 					proposals.put(s, c);
 					Message msg = (Message)c.op;
 					System.out.println(me + "|| SLOT: " + s + " || " + "proposing: " + msg.type + "--" + msg.payLoad);
-					//logger.info(me + "|| SLOT: " + s + " || " + "proposing: " + msg.type + "--" + msg.payLoad);
 					for (ProcessId ldr: leaders) {
 						if (ldr.name.equals("leader_" + myLeader) || myLeader == null) {
 							logger.info(me + "|| SLOT: " + s + " || " + "proposing: " + msg.type + "--" + msg.payLoad + " to Leader:" + ldr.name);
