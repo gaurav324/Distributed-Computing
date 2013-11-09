@@ -50,17 +50,15 @@ public class Process extends Thread {
 		            }
 	
 		        };
-				fh = new FileHandler(logFolder + "/" + me + ".log");
-				fh.setLevel(Level.FINEST);
-				fh.setFormatter(formatter);
-				logger.addHandler(fh);
-	
 				logger.setUseParentHandlers(false);
 				Logger globalLogger = Logger.getLogger("global");
 				Handler[] handlers = globalLogger.getHandlers();
 				for(Handler handler : handlers) {
 				    globalLogger.removeHandler(handler);
 				}
+				fh = new FileHandler(logFolder + "/" + me + ".log");
+				fh.setLevel(Level.FINEST);
+				fh.setFormatter(formatter);
 				logger.addHandler(fh);
 				
 		        LogManager lm = LogManager.getLogManager();
