@@ -40,6 +40,12 @@ public class IncomingSocket extends Thread {
 	private final Lock lock = new ReentrantLock();
 	private final Condition sendNewMessage = lock.newCondition();
 	
+	//Time out client to send command again.
+	int ClientTimeOut = 2000;
+	boolean ReceivedResponse = false;
+	
+	Message msg;
+	
 	protected IncomingSocket(Socket sock, Replica[] replicasx) throws IOException {
 		this.sock = sock;
 		in = new BufferedInputStream(sock.getInputStream());
@@ -69,7 +75,7 @@ public class IncomingSocket extends Thread {
 							delay = Integer.parseInt(b[0].split("=")[1]);
 							x = sb.toString();
 						}
-						Message msg = Message.parseMsg(x);
+						 msg = Message.parseMsg(x);
 					
 						for (int r = 0; r < replicas.length; r++) {
 							if (delay > 0) {
@@ -78,6 +84,32 @@ public class IncomingSocket extends Thread {
 							sendMessage(replicas[r],
 									new RequestMessage(pid, new Command(IncomingSocket.this, cid, msg)));	
 						}
+						
+						//if time out on replica send same command again.  
+						Thread t = new Thread() {
+							public void run(){
+								while(true) {
+									try {
+										sleep(ClientTimeOut);
+									}catch(InterruptedException e){}
+									if(ReceivedResponse)
+										break;
+									else {
+										//logger.info("Client timed out sending again.");
+										System.out.print("Client timed out sending again\n");
+										for (int r = 0; r < replicas.length; r++) {
+											sendMessage(replicas[r],
+													new RequestMessage(pid, new Command(IncomingSocket.this, cid, msg)));	
+										}
+										continue;
+									}
+									
+								}
+							}
+						
+						};
+						t.start();
+						
 						sendNewMessage.await();
 					}catch(Exception ex) {
 						ex.printStackTrace();
@@ -99,6 +131,7 @@ public class IncomingSocket extends Thread {
 				out.flush();
 				sendNewMessage.signal();
 				cid += 1;
+				ReceivedResponse = true;
 			}
 		} finally {
 			lock.unlock();
