@@ -45,7 +45,7 @@ public class IncomingSocket extends Thread {
 	boolean ReceivedResponse = false;
 	
 	Message msg;
-	
+
 	protected IncomingSocket(Socket sock, Replica[] replicasx) throws IOException {
 		this.sock = sock;
 		in = new BufferedInputStream(sock.getInputStream());
@@ -75,42 +75,15 @@ public class IncomingSocket extends Thread {
 							delay = Integer.parseInt(b[0].split("=")[1]);
 							x = sb.toString();
 						}
-						 msg = Message.parseMsg(x);
+						Message msg = Message.parseMsg(x);
 					
-						//for (int r = 0; r < replicas.length; r++) {
-						 for (int r = 0; r < 1; r++) {
+						for (int r = 0; r < replicas.length; r++) {
 							if (delay > 0) {
 								Thread.sleep(delay);
 							}
 							sendMessage(replicas[r],
 									new RequestMessage(pid, new Command(IncomingSocket.this, cid, msg)));	
 						}
-						
-						//if time out on replica send same command again.  
-						Thread t = new Thread() {
-							public void run(){
-								while(true) {
-									try {
-										sleep(ClientTimeOut);
-									}catch(InterruptedException e){}
-									if(ReceivedResponse)
-										break;
-									else {
-										//logger.info("Client timed out sending again.");
-										System.out.print("Client timed out sending again\n");
-										for (int r = 0; r < replicas.length; r++) {
-											sendMessage(replicas[r],
-													new RequestMessage(pid, new Command(IncomingSocket.this, cid, msg)));	
-										}
-										continue;
-									}
-									
-								}
-							}
-						
-						};
-						t.start();
-						
 						sendNewMessage.await();
 					}catch(Exception ex) {
 						ex.printStackTrace();
@@ -132,12 +105,104 @@ public class IncomingSocket extends Thread {
 				out.flush();
 				sendNewMessage.signal();
 				cid += 1;
-				ReceivedResponse = true;
 			}
 		} finally {
 			lock.unlock();
 		}
 	}
+		
+//	protected IncomingSocket(Socket sock, Replica[] replicasx) throws IOException {
+//		this.sock = sock;
+//		in = new BufferedInputStream(sock.getInputStream());
+//		out = new PrintWriter(sock.getOutputStream());
+//		pid = new ProcessId(this.getName());
+//
+//		// This was the culprit function.
+//		//sock.shutdownOutput();
+//		this.replicas = replicasx;
+//		this.messages = new Queue<String>();
+//		
+//		Thread t = new Thread() {
+//			public void run() {
+//				while(true) {
+//					lock.lock();
+//					try{
+//						String x = messages.bdequeue();
+//						System.out.println("Received: " + x);
+//						int delay = 0;
+//						if (x.startsWith("delay=")) {
+//							String[] b = x.split("--");
+//							StringBuilder sb = new StringBuilder();
+//							for (int i=1; i < b.length; ++i) {
+//								sb.append(b[i]);
+//								sb.append("--");
+//							}
+//							delay = Integer.parseInt(b[0].split("=")[1]);
+//							x = sb.toString();
+//						}
+//						 msg = Message.parseMsg(x);
+//					
+//						//for (int r = 0; r < replicas.length; r++) {
+//						 for (int r = 0; r < 1; r++) {
+//							if (delay > 0) {
+//								Thread.sleep(delay);
+//							}
+//							sendMessage(replicas[r],
+//									new RequestMessage(pid, new Command(IncomingSocket.this, cid, msg)));	
+//						}
+//						
+//						//if time out on replica send same command again.  
+//						Thread t = new Thread() {
+//							public void run(){
+//								while(true) {
+//									try {
+//										sleep(ClientTimeOut);
+//									}catch(InterruptedException e){}
+//									if(ReceivedResponse)
+//										break;
+//									else {
+//										//logger.info("Client timed out sending again.");
+//										System.out.print("Client timed out sending again\n");
+//										for (int r = 0; r < replicas.length; r++) {
+//											sendMessage(replicas[r],
+//													new RequestMessage(pid, new Command(IncomingSocket.this, cid, msg)));	
+//										}
+//										continue;
+//									}
+//									
+//								}
+//							}
+//						
+//						};
+//						t.start();
+//						
+//						sendNewMessage.await();
+//					}catch(Exception ex) {
+//						ex.printStackTrace();
+//					} finally {
+//						lock.unlock();
+//					}
+//				}
+//			}
+//		};
+//		t.start();
+//	}
+//	
+//	public void callBack(Command c, String reply) {
+//		lock.lock();
+//		try {
+//			if (c.req_id == cid) {
+//				System.out.println("Called back with " + reply);
+//				out.write(reply + "\n");
+//				out.flush();
+//				sendNewMessage.signal();
+//				cid += 1;
+//				ReceivedResponse = true;
+//			}
+//		} finally {
+//			lock.unlock();
+//		}
+//	}
 	
 	synchronized void sendMessage(Replica p, PaxosMessage msg){
 		if (p != null) {

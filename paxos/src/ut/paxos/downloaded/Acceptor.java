@@ -34,6 +34,7 @@ public class Acceptor extends Process {
 						if (pv.ballot_number == ballot_number && pv.slot_number == m.slot_no) {
 						//if (pv.slot_number == m.slot_no) {
 							Command pvCommand = pv.command;
+							logger.info(me + " || " + "Updated PValue's readOnlyCommand set :" + pv.toString());
 							pvCommand.addReadonlyCommand((Command)m.readReq.command);
 							flag = false;
 						}
@@ -41,7 +42,9 @@ public class Acceptor extends Process {
 					if (flag) {
 						Command cmd = new Command(null, -1, null);
 						cmd.addReadonlyCommand((Command)m.readReq.command);
-						accepted.add(new PValue(ballot_number, m.slot_no, cmd));
+						PValue pv = new PValue(ballot_number, m.slot_no, cmd);
+						logger.info(me + " || " + "Accepted :" + pv.toString());
+						accepted.add(pv);
 					}
 				}
 				sendMessage(m.src, new P1bMessage(me, ballot_number, new HashSet<PValue>(accepted)));

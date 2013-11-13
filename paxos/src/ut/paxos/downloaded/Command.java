@@ -21,6 +21,13 @@ public class Command {
 //		this.op = op;
 //	}
 
+	public Command(Command c) {
+		this.client = c.client; // This acts as a client.
+		this.req_id = c.req_id;
+		this.op = c.op;
+		
+		this.hiddenReadOnlyRequest = new ArrayList<Command>(c.hiddenReadOnlyRequest); 
+	}
 	public Command(IncomingSocket client, int req_id, Object op){
 		//this.client = client;
 		this.client = client; // This acts as a client.

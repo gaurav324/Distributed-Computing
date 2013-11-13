@@ -49,17 +49,21 @@ public class Leader extends Process {
 			}
 			if (msg instanceof ReadRequestMessage) {
 				// Find the maximum proposal.
-				int maxProp = -1;
+				int maxProp = 1;
 				for (Integer propNo : proposals.keySet()) {
 					if (propNo > maxProp) {
 						maxProp = propNo;
 					}
 				}
-				// Send the scout, with maximum proposal number. 
+				// Send the scout, with maximum proposal number.
+				Command maxPropCommand = proposals.get(maxProp);
+				if (maxPropCommand != null && maxPropCommand.client != null) {
+					maxProp += 1;
+				}
+				logger.info(me + " || " + " Received ReadRequestMessage. Proposing dummy command entry with SlotNo = " + maxProp);
 				new Scout(env, new ProcessId("scout:" + me + ":" + ballot_number),
-						me, acceptors, ballot_number, logFolder, logger, maxProp + 1, (ReadRequestMessage)msg);
-			}
-			if (msg instanceof ProposeMessage) {
+						me, acceptors, ballot_number, logFolder, logger, maxProp, (ReadRequestMessage)msg);
+			} else if (msg instanceof ProposeMessage) {
 				ProposeMessage m = (ProposeMessage) msg;
 				logger.info(me + " || Received: " + m.command.toString());
 				
@@ -81,7 +85,7 @@ public class Leader extends Process {
 				}
 			} else if (msg instanceof RequestHeartBeat) {
 				logger.info(me + " || Received: " + msg.toString());
-				waitBeforeHeartBeatPeriod += 200;
+				//waitBeforeHeartBeatPeriod += 200;
 				try {
 					sleep(waitBeforeHeartBeatPeriod);
 				} catch (InterruptedException e) {
@@ -119,7 +123,7 @@ public class Leader extends Process {
 							if (pv.command.client == null) {
 								//for (Command readCmd : pv.command.hiddenReadOnlyRequest) {
 									// Send replicas a message.
-									DecisionMessage dMsg = new DecisionMessage(me, pv.slot_number, pv.command);
+									DecisionMessage dMsg = new DecisionMessage(me, pv.slot_number, new Command(pv.command));
 									for (ProcessId repl: replicas) {
 										sendMessage(repl, dMsg);
 									}
@@ -192,7 +196,7 @@ public class Leader extends Process {
 			}
 
 			else {
-				System.err.println("Leader: unknown msg type");
+				System.err.println("Leader: unknown msg type: " + msg.toString());
 			}
 		}
 	}

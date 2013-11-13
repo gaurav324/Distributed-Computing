@@ -26,15 +26,18 @@ public class Replica extends Process {
 	Integer myLeader;
 	
 	// Variable to store when to execute a read only command.
-	HashMap<Integer, ArrayList<Command>> readOnlyToExecute = new HashMap<Integer, ArrayList<Command>>();
+	//HashMap<Integer, ArrayList<Command>> readOnlyToExecute = new HashMap<Integer, ArrayList<Command>>();
+	
+	// Store all the read only commands that have been executed.
+	HashMap<Command, Boolean> readOnlyExecuted = new HashMap<Command, Boolean>();
 	public Replica(Env env, ut.paxos.bank.State appState, ProcessId me, ProcessId[] leaders, String logFolder,
 			Integer myLeader) {
 		super(logFolder, env, me, null);
 		this.appState = appState;
 		this.leaders = leaders;
-		env.addProc(me, this);
 		
 		this.myLeader = myLeader;
+		env.addProc(me, this);
 	}
 
 	void propose(Command c) {
@@ -42,12 +45,18 @@ public class Replica extends Process {
 		// Send read-only commands only to all the leaders without assigning any slot number.
 		if (msg.type == MessageType.INQUIRY) {
 			for (ProcessId ldr: leaders) {
+				System.out.println(me + " || " + "proposing: " + msg.type + "--" + msg.payLoad + " to Leader:" + ldr.name);
 				logger.info(me + " || " + "proposing: " + msg.type + "--" + msg.payLoad + " to Leader:" + ldr.name);
 				sendMessage(ldr, new ReadRequestMessage(me, c));
 			}
 		} else if (!decisions.containsValue(c)) {
 			for (int s = 1;; s++) {
-				if (!proposals.containsKey(s) && !decisions.containsKey(s)) {
+				Command decisionCommand = decisions.get(s);
+				boolean useThisSlot = false;
+				if (decisionCommand != null && decisionCommand.client == null) {
+					useThisSlot = true;
+				}
+				if (!proposals.containsKey(s) && (!decisions.containsKey(s) || useThisSlot)) {
 					proposals.put(s, c);
 					System.out.println(me + "|| SLOT: " + s + " || " + "proposing: " + msg.type + "--" + msg.payLoad);
 					for (ProcessId ldr: leaders) {
@@ -87,13 +96,12 @@ public class Replica extends Process {
 			
 			// If this is a dummy message.
 			for (Command cc: c.hiddenReadOnlyRequest) {
-				try {
+				// If this read only has not been executed earlier.
+				if (!readOnlyExecuted.containsKey(cc)) {
 					Message readMsg = (Message)cc.op;
 					cc.client.callBack(cc, me + " : " + acc.inquiry());
-					System.out.println(acc.inquiry());
-				} catch (Exception ex) {
-					cc.client.callBack(c, ex.getMessage());
-					ex.printStackTrace();
+					readOnlyExecuted.put(cc, true);
+					System.out.println(me + " : " + acc.inquiry());
 				}
 			}
 			
@@ -216,13 +224,13 @@ public class Replica extends Process {
 					Command x = decisions.get(m.slot_number);
 					// This means this is for read-only purpose.
 					if (m.command.client == null) {
-						x.hiddenReadOnlyRequest = m.command.hiddenReadOnlyRequest;
+						x.hiddenReadOnlyRequest = new ArrayList<Command>(m.command.hiddenReadOnlyRequest);
 					} else {
 						x.client = m.command.client;
 						x.op = m.command.op;
 						x.req_id = m.command.req_id;
 						if (m.command.hiddenReadOnlyRequest != null) {
-							x.hiddenReadOnlyRequest = m.command.hiddenReadOnlyRequest;
+							x.hiddenReadOnlyRequest = new ArrayList<Command>(m.command.hiddenReadOnlyRequest);
 						}
 					}
 				} else {
@@ -254,8 +262,12 @@ public class Replica extends Process {
 								if (acc == null) {
 									throw new Exception("Not a valid account number " + msgSplit[0] + " for client: " + x.clientName);
 								}
-								cc.client.callBack(cc, me + " : " + acc.inquiry());
-								System.out.println(acc.inquiry());
+								// If this read only has not been executed earlier.
+								if (!readOnlyExecuted.containsKey(cc)) {
+									cc.client.callBack(cc, me + " : " + acc.inquiry());
+									readOnlyExecuted.put(cc, true);
+									System.out.println(me + ":" + acc.inquiry());
+								}
 							} catch (Exception ex) {
 								cc.client.callBack(c, ex.getMessage());
 								ex.printStackTrace();
