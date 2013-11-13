@@ -9,8 +9,12 @@ public class PaxosMessage {
 
 class P1aMessage extends PaxosMessage {
 	BallotNumber ballot_number;
-	P1aMessage(ProcessId src, BallotNumber ballot_number){
+	int slot_no; ReadRequestMessage readReq;
+	P1aMessage(ProcessId src, BallotNumber ballot_number, int slot_no, ReadRequestMessage readReq){
 		this.src = src; this.ballot_number = ballot_number;
+		// This is for read-only requests.
+		this.slot_no = slot_no;
+		this.readReq = readReq;
 }	}
 class P1bMessage extends PaxosMessage {
 	BallotNumber ballot_number; Set<PValue> accepted;
@@ -63,5 +67,22 @@ class RequestHeartBeat extends PaxosMessage {
 class HeartBeat extends PaxosMessage {
 	public HeartBeat(ProcessId src) {
 		this.src = src;
+	}
+}
+
+class ReadRequestMessage extends PaxosMessage {
+	Command command;
+	public ReadRequestMessage(ProcessId src,  Command command) {
+		this.src = src;
+		this.command = command;
+	}
+}
+
+class ReadRequestAttachMessage extends PaxosMessage {
+	int slot_number; // Slot number to which this read request is to be attached.
+	Command command;
+	public ReadRequestAttachMessage(int slot_number, Command command) {
+		this.slot_number = slot_number;
+		this.command = command;
 	}
 }

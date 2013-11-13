@@ -77,7 +77,8 @@ public class IncomingSocket extends Thread {
 						}
 						 msg = Message.parseMsg(x);
 					
-						for (int r = 0; r < replicas.length; r++) {
+						//for (int r = 0; r < replicas.length; r++) {
+						 for (int r = 0; r < 1; r++) {
 							if (delay > 0) {
 								Thread.sleep(delay);
 							}

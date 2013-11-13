@@ -10,6 +10,12 @@ public class PValue {
 		this.slot_number = slot_number;
 		this.command = command;
 	}
+	
+	public boolean equals(Object o) {
+		PValue other = (PValue) o;
+		return ballot_number == other.ballot_number && slot_number == other.slot_number;
+		//return client.equals(other.client) && out == other.out && op.equals(other.op);
+	}
 
 	public String toString(){
 		return "PV(" + ballot_number + ", " + slot_number + ", " + command + ")";
