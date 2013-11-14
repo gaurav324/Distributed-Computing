@@ -110,7 +110,8 @@ public class IncomingSocket extends Thread {
 			lock.unlock();
 		}
 	}
-		
+
+// OPTIONAL CLIENT RE-PROPOSE IMPLEMENTATION.
 //	protected IncomingSocket(Socket sock, Replica[] replicasx) throws IOException {
 //		this.sock = sock;
 //		in = new BufferedInputStream(sock.getInputStream());
@@ -158,6 +159,7 @@ public class IncomingSocket extends Thread {
 //									try {
 //										sleep(ClientTimeOut);
 //									}catch(InterruptedException e){}
+									// lock.lock();
 //									if(ReceivedResponse)
 //										break;
 //									else {
@@ -169,6 +171,7 @@ public class IncomingSocket extends Thread {
 //										}
 //										continue;
 //									}
+									//lock.unlock();
 //									
 //								}
 //							}

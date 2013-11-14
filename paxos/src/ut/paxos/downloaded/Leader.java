@@ -47,6 +47,7 @@ public class Leader extends Process {
 				//logger.info(me + ". Trying to acquire ping pong lock.");
 				pingPongLock.lock();
 			}
+			logger.info(me + " || Received: " + msg.toString());
 			if (msg instanceof ReadRequestMessage) {
 				// Find the maximum proposal.
 				int maxProp = 1;
@@ -61,6 +62,8 @@ public class Leader extends Process {
 					maxProp += 1;
 				}
 				logger.info(me + " || " + " Received ReadRequestMessage. Proposing dummy command entry with SlotNo = " + maxProp);
+				// If you would not do this, you may execute more commands, which may happen before this particular read-only.
+				active = false;
 				new Scout(env, new ProcessId("scout:" + me + ":" + ballot_number),
 						me, acceptors, ballot_number, logFolder, logger, maxProp, (ReadRequestMessage)msg);
 			} else if (msg instanceof ProposeMessage) {
@@ -85,7 +88,7 @@ public class Leader extends Process {
 				}
 			} else if (msg instanceof RequestHeartBeat) {
 				logger.info(me + " || Received: " + msg.toString());
-				//waitBeforeHeartBeatPeriod += 200;
+				waitBeforeHeartBeatPeriod += 200;
 				try {
 					sleep(waitBeforeHeartBeatPeriod);
 				} catch (InterruptedException e) {
@@ -169,6 +172,7 @@ public class Leader extends Process {
 								if (isSeniorLeaderAlive) {
 									continue;
 								} else {
+									logger.info("Other leader seems to be dead. Let me try scout and take control.");
 									isPingingSeniorLeader = false;
 									if (ballot_number.compareTo(m.ballot_number) < 0) {
 										ballot_number = new BallotNumber(m.ballot_number.round + 1, me);

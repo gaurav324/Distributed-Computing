@@ -34,7 +34,7 @@ public class Acceptor extends Process {
 						if (pv.ballot_number == ballot_number && pv.slot_number == m.slot_no) {
 						//if (pv.slot_number == m.slot_no) {
 							Command pvCommand = pv.command;
-							logger.info(me + " || " + "Updated PValue's readOnlyCommand set :" + pv.toString());
+							logger.info(me + " || " + "Updated PValues readOnlyCommand set :" + pv.toString());
 							pvCommand.addReadonlyCommand((Command)m.readReq.command);
 							flag = false;
 						}

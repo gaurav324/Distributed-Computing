@@ -47,7 +47,9 @@ public class Replica extends Process {
 			for (ProcessId ldr: leaders) {
 				System.out.println(me + " || " + "proposing: " + msg.type + "--" + msg.payLoad + " to Leader:" + ldr.name);
 				logger.info(me + " || " + "proposing: " + msg.type + "--" + msg.payLoad + " to Leader:" + ldr.name);
-				sendMessage(ldr, new ReadRequestMessage(me, c));
+				if (ldr.name.equals("leader_" + myLeader) || myLeader == null) {
+					sendMessage(ldr, new ReadRequestMessage(me, c));
+				}
 			}
 		} else if (!decisions.containsValue(c)) {
 			for (int s = 1;; s++) {
