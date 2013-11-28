@@ -15,7 +15,7 @@ public class Leader extends Process {
 	boolean failureDetectionSet;
 	boolean isPingingSeniorLeader;
 	boolean isSeniorLeaderAlive;
-	int waitBeforeHeartBeatPeriod = 0;
+	int waitBeforeHeartBeatPeriod = 500;
 	
 	public Leader(Env env, ProcessId me, ProcessId[] acceptors,
 										ProcessId[] replicas, ProcessId[] leaders, String logFolder, 
@@ -88,7 +88,7 @@ public class Leader extends Process {
 				}
 			} else if (msg instanceof RequestHeartBeat) {
 				logger.info(me + " || Received: " + msg.toString());
-				waitBeforeHeartBeatPeriod += 200;
+				waitBeforeHeartBeatPeriod += 500;
 				try {
 					sleep(waitBeforeHeartBeatPeriod);
 				} catch (InterruptedException e) {
@@ -128,6 +128,7 @@ public class Leader extends Process {
 									// Send replicas a message.
 									DecisionMessage dMsg = new DecisionMessage(me, pv.slot_number, new Command(pv.command));
 									for (ProcessId repl: replicas) {
+										logger.info("Replying for read-only command to: replica_" + repl);
 										sendMessage(repl, dMsg);
 									}
 								//}
@@ -135,7 +136,7 @@ public class Leader extends Process {
 							proposals.put(pv.slot_number, pv.command);
 						}
 					}
-
+					
 					for (int sn : proposals.keySet()) {
 						Command x = proposals.get(sn);
 						// This check is there, because you have received a command
