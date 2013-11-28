@@ -1,10 +1,12 @@
-This project is done is a part of the CS 380D Distributed computing course taught by Dr. ALivisi Lorenzo and aims at building a distributed playlist using JAVA. 
+This a collection of distributed computing projects that I have done as a part of CS 380D Distributed computing course taught by Dr. ALivisi Lorenzo.
 
-1. Atomic commit protocol used here is 3-Phase commit. 
-2. We also implement state recovery, including total failures.
+List of the projects:
 
-We have included a playlist/src/python/test_case.py script, which can be used to run demos and interact with the running playlist servers. 
-One can configure the server list using playlist/config.properties files.
+1. Distributed playlist using 3-Phase commit for a synchronous system having crash-recover failures.
+2. Distributed replicated bank using PAXOS. Obviously it is an asynchronous system, non-FIFO channels but only crash failures.
+3. Distributed weakly replicated playlist database using Bayou. Implemented anti-entropy for READ your writes sessions.
+
+All the projects have python clients to interact with the servers. One can configure the server list using playlist/config.properties files.
 
 Cheers !!
 Gaurav Nanda
