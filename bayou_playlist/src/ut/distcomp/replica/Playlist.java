@@ -12,10 +12,13 @@ public class Playlist {
 		switch (op.type) {
 			case ADD:
 				add(op.song, op.url);
+				break;
 			case DELETE:
 				delete(op.song);
+				break;
 			case EDIT:
 				edit(op.song, op.url);
+				break;
 		}
 	}
 	

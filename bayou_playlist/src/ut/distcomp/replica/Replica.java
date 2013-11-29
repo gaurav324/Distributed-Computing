@@ -25,13 +25,14 @@ public class Replica {
 	final ConcurrentLinkedQueue<String> queue;
 
 	// This is the container which would have data about all the commands stored.
-	final CommandLog cmds = new CommandLog();
+	final CommandLog cmds;
 	
 	// This is where we maintain all the playlist.
 	final Playlist playlist = new Playlist();
 	
 	public Replica(String processId) {
 		this.processId = processId;
+		this.cmds = new CommandLog(this.processId);
 		
 		try {
 			Handler fh = new FileHandler(System.getProperty("LOG_FOLDER") + "/" + processId + ".log");
@@ -79,6 +80,7 @@ public class Replica {
 								config.logger.warning(e.getMessage());
 								e.printStackTrace();
 							}
+							break;
 						}
 					}
 				}

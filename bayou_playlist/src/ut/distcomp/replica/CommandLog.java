@@ -8,18 +8,19 @@ import java.util.Collections;
 import java.util.Comparator;
 
 public class CommandLog {
-	String commandLogFileName = System.getProperty("LOG_FOLDER") + "/replicaLogs/" +  Replica.processId + ".log";
+	final String commandLogFileName;
 	
 	ArrayList<Command> cmds = new ArrayList<Command>();
 	final CommandComparator comparator = new CommandComparator(); 
 	
 	// Empty Constructor.
-	public CommandLog() {
-		
+	public CommandLog(String processId) {
+		this.commandLogFileName = System.getProperty("LOG_FOLDER") + "/replicaLogs/" + processId + ".log";
 	}
 	
 	// Create a copy of the list of commands.
-	public CommandLog(ArrayList<Command> cmds) {
+	public CommandLog(ArrayList<Command> cmds, String processId) {
+		this.commandLogFileName = System.getProperty("LOG_FOLDER") + "/replicaLogs/" + processId + ".log";
 		this.cmds = new ArrayList<Command>(cmds);
 	}
 	
@@ -41,7 +42,9 @@ public class CommandLog {
 			PrintWriter writer = new PrintWriter(this.commandLogFileName, "UTF-8");
 			for(Command cmd: this.cmds) {
 				writer.write(cmd.toString());
+				writer.write("\n");
 			}
+			writer.close();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (UnsupportedEncodingException e) {
