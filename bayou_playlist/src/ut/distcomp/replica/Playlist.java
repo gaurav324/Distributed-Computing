@@ -8,6 +8,17 @@ public class Playlist {
 	public Playlist() {
 	}
 	
+	public void performOperation(Operation op) throws SongNotFoundException {
+		switch (op.type) {
+			case ADD:
+				add(op.song, op.url);
+			case DELETE:
+				delete(op.song);
+			case EDIT:
+				edit(op.song, op.url);
+		}
+	}
+	
 	public synchronized void add(String song, String url) {
 		this.playList.put(song, url);
 	}

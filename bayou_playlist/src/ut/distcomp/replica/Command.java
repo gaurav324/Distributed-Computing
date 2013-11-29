@@ -1,14 +1,16 @@
 package ut.distcomp.replica;
 
+import java.util.Comparator;
+
 public class Command {
 	int CSN;
-	int acceptStamp;
+	long acceptStamp;
 	String serverId;
 	Operation operation;
 	
 	public static final String SEPARATOR = " || ";
 	
-	public Command(int CSN, int acceptStamp, String serverId, Operation operation) {
+	public Command(int CSN, long acceptStamp, String serverId, Operation operation) {
 		this.CSN = CSN;
 		this.acceptStamp = acceptStamp;
 		this.serverId = serverId;
@@ -65,4 +67,20 @@ public class Command {
 		
 		return null;
 	}
+}
+
+class CommandComparator implements Comparator<Command>
+{
+    public int compare(Command c1, Command c2)
+    {
+        if (c1.CSN != c2.CSN) {
+        	return c2.CSN > c1.CSN ? -1 : 1;
+        } else if (c1.acceptStamp != c2.acceptStamp) {
+        	return c2.acceptStamp > c1.acceptStamp ? -1 : 1;
+        } else if (c1.serverId != c2.serverId) {
+        	return c1.serverId.compareTo(c2.serverId);
+        }
+        
+        return 0;
+    }
 }

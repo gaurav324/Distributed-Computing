@@ -14,6 +14,9 @@ import ut.distcomp.util.Queue;
 public class Replica {
 	// Process Id attached to this replica. This is not the system ProcessID, but just an identifier to identify the server.
 	static String processId;
+	
+	// Am I the primary server.
+	boolean isPrimary;
 		
 	// Instance of the config associated with this replica.
 	static Config config;
@@ -23,6 +26,9 @@ public class Replica {
 
 	// This is the container which would have data about all the commands stored.
 	final CommandLog cmds = new CommandLog();
+	
+	// This is where we maintain all the playlist.
+	final Playlist playlist = new Playlist();
 	
 	public Replica(String processId) {
 		this.processId = processId;
@@ -45,9 +51,36 @@ public class Replica {
 		Thread th = new Thread() {
 			public void run() {
 				while(true) {
-					String message = queue.poll();
-					
+					String msg = queue.poll();
 					Message message = Message.parseMsg(msg);
+					
+					switch (message.type) {
+						case ADD:
+						case DELETE:
+						case EDIT: {
+							Operation op = Operation.operationFromString(message.payLoad);
+							try {
+								// Update your memory.
+								playlist.performOperation(op);
+								
+								// Update the log file. 
+								// Therefore update list of commands in the memory first.
+								int CSN = Integer.MAX_VALUE;
+								if (isPrimary) {
+									CSN = cmds.getMaxCSN();
+									CSN += 1;
+								}
+								long acceptStamp = System.currentTimeMillis()/1000 + 1;
+								Command cmd = new Command(CSN, acceptStamp, processId, op);
+								cmds.add(cmd);
+								cmds.writeToFile();
+							} catch (SongNotFoundException e) {
+								System.out.println(e.getMessage());
+								config.logger.warning(e.getMessage());
+								e.printStackTrace();
+							}
+						}
+					}
 				}
 			}
 		};
