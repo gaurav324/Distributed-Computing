@@ -14,6 +14,7 @@ proc_count = -1
 my_replicaId = 0
 my_latest_write = "X"
 my_Id = -1;
+root = "/"
 
 
 def read_config():
@@ -28,7 +29,7 @@ def read_config():
     process_no_pid_map = {}
     process_no_tuple_map = {}
 
-    f = open("/Users/Gill/Documents/Distri_projects/distri-projects/bayou_playlist/intial_config.properties")
+    f = open(opts.root + "/intial_config.properties")
     content = f.readline()
     lines = f.readlines()
 
@@ -82,6 +83,10 @@ def getopts():
     parser.add_option("--root",
                       help="Location where you have copied the project.")
 
+    parser.add_option("--logFolder",
+                      help="Location where all the log files are kept.")
+
+
     opts,args = parser.parse_args()
 
     return opts, args
@@ -92,7 +97,7 @@ def test_func():
 
 
 def command(cmd):
-    read_config()
+    #read_config()
     global my_latest_write
     global my_replicaId
     command = cmd.split("@")
@@ -143,13 +148,124 @@ def command(cmd):
 	print "Not a valid command\n"	
 	
 	 
+def isolate(x):
+    f = open(opts.root + "/intial_config.properties")
+    content = f.readline()
+    lines = f.readlines()
+    process_isolate_map = {}
+    
+    # Total number of process.
+    proc_number = int(content.split("=")[1])
+    print "Total process to spawn: ", proc_number
+   
+    #s = socket.socket()
+
+    for i in range(0,proc_number):
+	if(i != int(x)):
+	    s = socket.socket()
+	    tup = process_no_tuple_map[i]
+	    s.connect(tup)
+	    cmd_str =  ("-1--DISCONNECT--" + "==" + str(x) + "&")
+	    print cmd_str
+	    
+	
+    f.close()
+
+def reconnect(x):
+    f = open(opts.root + "/intial_config.properties")
+    content = f.readline()
+    lines = f.readlines()
+    #process_isolate_map = {}
+    
+    # Total number of process.
+    proc_number = int(content.split("=")[1])
+    print "Total process to spawn: ", proc_number
+   
+    #s = socket.socket()
+
+    for i in range(0,proc_number):
+	if(i != int(x)):
+	    s = socket.socket()
+	    tup = process_no_tuple_map[i]
+	    s.connect(tup)
+	    cmd_str =  ("-1--RECONNECT--" + "==" + str(x) + "&")
+	    s.send(cmd_str)
+	    print cmd_str
+	    
+	
+    f.close()
+
+def breakConnection(i,j):
+    
+    #telling i to disconnect from j
+    s = socket.socket()
+    tup = process_no_tuple_map[int(i)]
+    s.connect(tup)
+    cmd_str =  ("-1--DISCONNECT--" + "==" + str(j) + "&")
+    s.send(cmd_str)    
+    print cmd_str + "\t"
+
+    #telling j to disconnect from i
+    s = socket.socket()
+    tup = process_no_tuple_map[int(j)]
+    s.connect(tup)
+    cmd_str =  ("-1--DISCONNECT--" + "==" + str(i) + "&")
+    s.send(cmd_str)    
+    print cmd_str
+
+
+def recoverConnection(i,j):
+    
+    #telling i to disconnect from j
+    s = socket.socket()
+    tup = process_no_tuple_map[int(i)]
+    s.connect(tup)
+    cmd_str =  ("-1--RECONNECT--" + "==" + str(j) + "&")
+    s.send(cmd_str)    
+    print cmd_str + "\t"
+
+    #telling j to disconnect from i
+    s = socket.socket()
+    tup = process_no_tuple_map[int(j)]
+    s.connect(tup)
+    cmd_str =  ("-1--RECONNECT--" + "==" + str(i) + "&")
+    s.send(cmd_str)    
+    print cmd_str
+
+    
+def printLog(x):
+    if(x == -1):
+	f = open(opts.root +  "/intial_config.properties")
+	content = f.readline()
+    
+	 # Total number of process.
+	proc_number = int(content.split("=")[1])
+	print "Total Log files: ", proc_number
+
+	for i in range(0,proc_number):
+	    logFile = (opts.logFolder + "replicaLogs/" + str(i) + ".log")
+	    print str(i) + ".log"
+	    os.system('cat %(logFile)s'% locals())
+	    print "\n"
+
+	f.close()
+    else:
+	logFile = (opts.logFolder + "replicaLogs/" + str(x) + ".log")
+	print str(x) + ".log"
+	os.system('cat %(logFile)s'% locals())
+	print "\n"
+
 
 
 
 if __name__ == "__main__":
     opts, args = getopts()
+    read_config()
+
     #delay = float(opts.delay)
    
+    #root  = opts.root
+    print root
     my_replicaId = opts.my_replicaId
     #proc, conn = connect_replica(opts, args);
    
