@@ -13,6 +13,9 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 
+import ut.distcomp.replica.InputPacket;
+import ut.distcomp.util.Queue;
+
 public class ListenServer extends Thread {
 
 	public volatile boolean killSig = false;
@@ -21,10 +24,10 @@ public class ListenServer extends Thread {
 	final List<IncomingSock> socketList;
 	final Config conf;
 	final ServerSocket serverSock;
-	ConcurrentLinkedQueue<String> queue;
+	Queue<InputPacket> queue;
 
 	protected ListenServer(Config conf, List<IncomingSock> sockets, 
-			ConcurrentLinkedQueue<String> queue) {
+			Queue<InputPacket> queue) {
 		this.conf = conf;
 		this.socketList = sockets;
 		this.queue = queue;

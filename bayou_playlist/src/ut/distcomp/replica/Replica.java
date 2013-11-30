@@ -2,6 +2,8 @@ package ut.distcomp.replica;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
@@ -16,19 +18,22 @@ public class Replica {
 	static String processId;
 	
 	// Am I the primary server.
-	boolean isPrimary;
+	static boolean isPrimary;
 		
 	// Instance of the config associated with this replica.
 	static Config config;
 	
 	// Event queue for storing all the messages from the wire. This queue would be passed to the NetController.
-	final ConcurrentLinkedQueue<String> queue;
+	final Queue<InputPacket> queue;
 
 	// This is the container which would have data about all the commands stored.
 	final CommandLog cmds;
 	
 	// This is where we maintain all the playlist.
-	final Playlist playlist = new Playlist();
+	static final Playlist playlist = new Playlist();
+	
+	// Controller instance used to send messages to all the replicas.
+	final NetController controller;
 	
 	public Replica(String processId) {
 		this.processId = processId;
@@ -39,33 +44,37 @@ public class Replica {
 			fh.setLevel(Level.FINEST);
 			
 			config = new Config(System.getProperty("CONFIG_NAME"), fh);		
+			
+			if (this.processId.equals("0")) {
+				isPrimary = true;
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	
 		// Start NetController and start receiving messages from other servers.
-		this.queue = new Queue<String>();
-		NetController controller = new NetController(processId, config, queue);
+		this.queue = new Queue<InputPacket>();
+		controller = new NetController(processId, config, queue);
 	}
 	
 	public void startReceivingMessages() {
 		Thread th = new Thread() {
 			public void run() {
 				while(true) {
-					String msg = queue.poll();
+					InputPacket msgPacket = queue.poll();
+					String msg = msgPacket.msg;
+					config.logger.fine("Trying to parse: " + msg);
 					Message message = Message.parseMsg(msg);
-					
+		
 					switch (message.type) {
-						case ADD:
-						case DELETE:
-						case EDIT: {
+						case OPERATION: {
 							Operation op = Operation.operationFromString(message.payLoad);
+							config.logger.info("Received: " + op.toString());
 							try {
 								// Update your memory.
 								playlist.performOperation(op);
 								
-								// Update the log file. 
-								// Therefore update list of commands in the memory first.
+								// Update the log file. Therefore update list of commands in the memory first.
 								int CSN = Integer.MAX_VALUE;
 								if (isPrimary) {
 									CSN = cmds.getMaxCSN();
@@ -75,6 +84,18 @@ public class Replica {
 								Command cmd = new Command(CSN, acceptStamp, processId, op);
 								cmds.add(cmd);
 								cmds.writeToFile();
+								
+								String reply = acceptStamp + "==" + processId;
+								try {
+									msgPacket.out.write(reply.getBytes());
+									msgPacket.out.flush();
+								} catch (IOException e) {
+									e.printStackTrace();
+								}								
+								
+								// Once a message is written to the log file.
+								// We can transfer that update to all the adjoining replicas.
+								updateNeighbors(null);
 							} catch (SongNotFoundException e) {
 								System.out.println(e.getMessage());
 								config.logger.warning(e.getMessage());
@@ -82,7 +103,55 @@ public class Replica {
 							}
 							break;
 						}
+						case ENTROPY: {
+							config.logger.info("Received command set from: " + message.process_id);
+							ArrayList<Command> entropyCmds = CommandLog.deSerializeCommands(message.payLoad);
+							if (entropyCmds == null) {
+								config.logger.warning("Could not parse command log coming from: " + message.process_id);
+								break;
+							}
+							//System.out.println(entropyCmds.toString());
+							boolean success = false; 
+							for (Command cmd : entropyCmds) {
+								// Add each of this command to my own set.
+								success = cmds.add(cmd);
+							}
+							// If there is even atleast one addition, we would forward command to all other replicas
+							// except myself and the process you sent this file.
+							if (success) {
+								cmds.writeToFile();
+								if (isPrimary) {
+									// If primary received new messages, it must have assigned the CSN also.
+									// Therefore, we need to tell this back to the sender.
+									updateNeighbors(null);
+								} else {
+									// Otherwise, tell all except send sender.
+									updateNeighbors(message.process_id);
+								}
+							}
+							break;
+						}
+						case READ: {
+							config.logger.info("Replying back to the read.");
+							try {
+								msgPacket.out.write(playlist.toString().getBytes());
+								msgPacket.out.flush();
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
 					}
+				}
+			}
+
+			private void updateNeighbors(String exceptProcess) {
+				String payload = cmds.serializeCommands();
+				HashMap<String, Boolean> exceptMap = new HashMap<String, Boolean>();
+				exceptMap.put(exceptProcess, true);
+				if (payload != null) {
+					Message msg = new Message(processId, MessageType.ENTROPY, payload);
+					config.logger.fine("Going to broadcast command set: " + msg.toString());
+					controller.broadCastMsgs(msg.toString(), exceptMap);
 				}
 			}
 		};

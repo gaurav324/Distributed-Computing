@@ -1,9 +1,11 @@
 package ut.distcomp.replica;
 
-public class Operation {
+import java.io.Serializable;
+
+public class Operation implements Serializable {
 	public static final String SEPARATOR = "==";
 	
-	MessageType type;
+	OperationType type;
 	String song;
 	String url;
 	
@@ -11,11 +13,11 @@ public class Operation {
 		Operation op = new Operation();
 		String[] strSplit = str.split(Operation.SEPARATOR);
 		
-		MessageType type = MessageType.valueOf(strSplit[0]);
+		OperationType type = OperationType.valueOf(strSplit[0]);
 		op.type = type;
 		op.song = strSplit[1];
 		
-		if (type == MessageType.ADD || type == MessageType.EDIT) {
+		if (type == OperationType.ADD || type == OperationType.EDIT) {
 			op.url = strSplit[2];
 		}
 		

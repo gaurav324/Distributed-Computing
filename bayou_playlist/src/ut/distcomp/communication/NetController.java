@@ -16,11 +16,16 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
+
+import ut.distcomp.replica.InputPacket;
+import ut.distcomp.util.Queue;
 
 /**
  * Public interface for managing network connections.
@@ -31,84 +36,71 @@ import java.util.logging.Level;
 public class NetController {
 	private final Config config;
 	private final List<IncomingSock> inSockets;
-	private final OutgoingSock[] outSockets;
+	private final HashMap<String, OutgoingSock> outSockets;
 	private final ListenServer listener;
 	
-	public NetController(String processId, Config config, ConcurrentLinkedQueue<String> queue) {
+	public NetController(String processId, Config config, Queue<InputPacket> queue) {
 		this.config = config;
 		this.config.procNum = processId;
+
 		inSockets = Collections.synchronizedList(new ArrayList<IncomingSock>());
+		outSockets = new HashMap<String, OutgoingSock>();
+		
+		for (String process: config.addresses.keySet()) {
+			outSockets.put(process, null);
+		}
+
 		listener = new ListenServer(config, inSockets, queue);
-		outSockets = new OutgoingSock[config.numProcesses];
 		listener.start();
 	}
 	
-	// Establish outgoing connection to a process
-	private synchronized void initOutgoingConn(int proc) throws IOException {
-		if (outSockets[proc] != null)
+	// Establish outgoing connection to a process.
+	private synchronized void initOutgoingConn(String proc) throws IOException {
+		if (outSockets.get(proc) != null)
 			throw new IllegalStateException("proc " + proc + " not null");
 		
-		outSockets[proc] = new OutgoingSock(new Socket(config.addresses[proc], config.ports.get("" + proc)));
-		config.logger.info(String.format("Server %d: Socket to %d established", 
+		outSockets.put(proc, new OutgoingSock(new Socket(config.addresses.get(proc), config.ports.get("" + proc))));
+		config.logger.info(String.format("Server %s: Socket to %s established", 
 				config.procNum, proc));
 	}
 	
-	public synchronized void sendMsgs(Set<Integer> processes, String msg, int partial_count) {
-		for(Integer processNo: processes) {	
-			
-			if (partial_count == -1) {
-				config.logger.info("Sending: " + msg + " to " + processNo);
-				sendMsg(processNo, msg);
-			}
-			
-			if (partial_count != -1 && processNo == partial_count) {
-				config.logger.info("Sending: " + msg + " to " + processNo);
-				sendMsg(processNo, msg);
-				try {
-					Thread.sleep(1000);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				config.logger.warning("Killing myself.");
-				System.exit(1);
-			} 
+	public synchronized void sendMsgs(Set<String> processes, String msg) {//, int partial_count) {
+		for(String processNo: processes) {	
+			config.logger.info("Sending: " + msg + " to " + processNo);
+			sendMsg(processNo, msg);
 		}
 	}
 	
-	public synchronized void broadCastMsgs(String msg)
+	public synchronized void broadCastMsgs(String msg, HashMap<String, Boolean> exceptProcess)
 	{
-		for (int i=0; i < outSockets.length; ++i) {
-			if (!config.procNum.equals("" + i)) {
-				sendMsg(i, msg);
+		Set<String> keySet = new HashSet<String>(outSockets.keySet());
+		for (String processId: keySet) {
+			if (processId.equals(this.config.procNum) || exceptProcess.containsKey(processId)) {
+				continue;
 			}
+			config.logger.info("Sending Message to " + processId + ".	");
+			sendMsg(processId, msg);
 		}
 	}
 	
-	/**
-	 * Send a msg to another process.  This will establish a socket if one is not created yet.
-	 * Will fail if recipient has not set up their own NetController (and its associated serverSocket)
-	 * @param process int specified in the config file - 0 based
-	 * @param msg Do not use the "&" character.  This is hardcoded as a message separator. 
-	 *            Sends as ASCII.  Include the sending server ID in the message
-	 * @return bool indicating success
-	 */
-	public synchronized boolean sendMsg(int process, String msg) {
+	public synchronized boolean sendMsg(String process, String msg) {
 		try {
-			if (outSockets[process] == null)
+			if (outSockets.get(process) == null)
 				initOutgoingConn(process);
-			outSockets[process].sendMsg(msg);
+			outSockets.get(process).sendMsg(msg);
 		} catch (IOException e) { 
-			if (outSockets[process] != null) {
-				outSockets[process].cleanShutdown();
-				outSockets[process] = null;
+			OutgoingSock sock = outSockets.get(process);
+			if (sock != null) {
+				sock.cleanShutdown();
+				outSockets.remove(process);
 				try{
 					initOutgoingConn(process);
-                        		outSockets[process].sendMsg(msg);	
+					sock = outSockets.get(process);
+					sock.sendMsg(msg);	
 				} catch(IOException e1){
-					if (outSockets[process] != null) {
-						outSockets[process].cleanShutdown();
-	                	outSockets[process] = null;
+					if (sock != null) {
+						sock.cleanShutdown();
+						outSockets.remove(process);
 					}
 					//config.logger.info(String.format("Server %d: Msg to %d failed.",
                     //    config.procNum, process));
@@ -131,8 +123,8 @@ public class NetController {
 	 * Return a list of msgs received on established incoming sockets
 	 * @return list of messages sorted by socket, in FIFO order. *not sorted by time received*
 	 */
-	public synchronized List<String> getReceivedMsgs() {
-		List<String> objs = new ArrayList<String>();
+	public synchronized List<InputPacket> getReceivedMsgs() {
+		List<InputPacket> objs = new ArrayList<InputPacket>();
 		config.logger.log(Level.INFO, "Looking for messages.");
 		synchronized(inSockets) {
 			ListIterator<IncomingSock> iter  = inSockets.listIterator();
@@ -162,7 +154,7 @@ public class NetController {
                     sock.cleanShutdown();
         }
 		if(outSockets != null) {
-            for (OutgoingSock sock : outSockets)
+            for (OutgoingSock sock : outSockets.values())
 			    if(sock != null)
                     sock.cleanShutdown();
         }

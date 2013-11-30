@@ -8,34 +8,41 @@
 package ut.distcomp.communication;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 
+import ut.distcomp.replica.InputPacket;
+import ut.distcomp.util.Queue;
+
 public class IncomingSock extends Thread {
 	final static String MSG_SEP = "&";
 	Socket sock;
 	InputStream in;
+	OutputStream out;
 	private volatile boolean shutdownSet;
-	ConcurrentLinkedQueue<String> queue;
+	Queue<InputPacket> queue;
 	int bytesLastChecked = 0;
 	Config conf;
 	
 	protected IncomingSock(Socket sock, Config conf, 
-			ConcurrentLinkedQueue<String> queue) throws IOException {
+			Queue<InputPacket> queue) throws IOException {
 		this.sock = sock;
 		in = new BufferedInputStream(sock.getInputStream());
+		out = new BufferedOutputStream(sock.getOutputStream());
 		this.queue = queue;
 		this.conf = conf;
 	}
 	
-	protected List<String> getMsgs() {
-		List<String> msgs = new ArrayList<String>();
-		String tmp;
+	protected List<InputPacket> getMsgs() {
+		List<InputPacket> msgs = new ArrayList<InputPacket>();
+		InputPacket tmp;
 		conf.logger.log(Level.INFO, "Queue size" + queue.size());
 		while((tmp = queue.poll()) != null)
 			msgs.add(tmp);
@@ -56,7 +63,8 @@ public class IncomingSock extends Thread {
 					int curPtr = 0;
 					int curIdx;
 					while ((curIdx = dataStr.indexOf(MSG_SEP, curPtr)) != -1) {
-						queue.offer(dataStr.substring(curPtr, curIdx));
+						InputPacket packet = new InputPacket(dataStr.substring(curPtr, curIdx), out);
+						queue.offer(packet);
 						String x = dataStr.substring(curPtr, curIdx);
 						curPtr = curIdx + 1;
 					}

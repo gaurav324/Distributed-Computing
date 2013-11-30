@@ -1,14 +1,15 @@
 package ut.distcomp.replica;
 
+import java.io.Serializable;
 import java.util.Comparator;
 
-public class Command {
+public class Command implements Serializable {
 	int CSN;
 	long acceptStamp;
 	String serverId;
 	Operation operation;
 	
-	public static final String SEPARATOR = " || ";
+	public static final String SEPARATOR = "~~";
 	
 	public Command(int CSN, long acceptStamp, String serverId, Operation operation) {
 		this.CSN = CSN;
@@ -42,19 +43,20 @@ public class Command {
 	public String toString() {
 		StringBuilder command = new StringBuilder();
 		command.append(this.CSN);
-		command.append(SEPARATOR);
+		command.append(Command.SEPARATOR);
 		command.append(this.acceptStamp);
-		command.append(SEPARATOR);
+		command.append(Command.SEPARATOR);
 		command.append(this.serverId);
-		command.append(SEPARATOR);
+		command.append(Command.SEPARATOR);
 		command.append(this.operation.toString());
 		
 		return command.toString();
 	}
 	
 	public static Command fromString(String command) {
-		String[] commandSplit = command.split(SEPARATOR);
-		
+		String[] commandSplit = command.split(Command.SEPARATOR);
+		Replica.config.logger.fine("Going to construct Command from: " + command);
+
 		try {
 			Command newCmd = new Command(Integer.parseInt(commandSplit[0]), 
 					Integer.parseInt(commandSplit[1]), 

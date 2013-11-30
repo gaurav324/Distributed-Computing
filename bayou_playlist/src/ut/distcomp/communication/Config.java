@@ -71,16 +71,16 @@ public class Config {
         LogManager lm = LogManager.getLogManager();
         lm.addLogger(logger);
 
-		//logger.setLevel(Level.FINEST);
+		logger.setLevel(Level.FINEST);
 
 		Properties prop = new Properties();
 		prop.load(new FileInputStream(filename));
 		numProcesses = loadInt(prop,"NumProcesses");
-		addresses = new InetAddress[numProcesses];
+		addresses = new HashMap<String, InetAddress>();
 		ports = new HashMap<String, Integer>();
 		for (int i=0; i < numProcesses; i++) {
 			ports.put("" + i, loadInt(prop, "port" + i));
-			addresses[i] = InetAddress.getByName(prop.getProperty("host" + i).trim());
+			addresses.put("" + i, InetAddress.getByName(prop.getProperty("host" + i).trim()));
 		}
 		if (prop.getProperty("procNum") != null) {
 			procNum = prop.getProperty("procNum");
@@ -102,7 +102,7 @@ public class Config {
 	/**
 	 * Array of addresses of other hosts.  All hosts should have identical info here.
 	 */
-	public InetAddress[] addresses;
+	public HashMap<String, InetAddress> addresses;
 	
 	/**
 	 * Array of listening port of other hosts.  All hosts should have identical info here.

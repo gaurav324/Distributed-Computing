@@ -43,6 +43,19 @@ public class Playlist {
 		
 		throw new SongNotFoundException("Could not find song: " + song);
 	}
+	
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		for (String key: playList.keySet()) {
+			builder.append(key + " : " + playList.get(key));
+			builder.append("\n");
+		}
+		return builder.toString();
+	}
+	
+	public void clear() {
+		playList = new Hashtable<String, String>();
+	}
 }
 
 class SongNotFoundException extends Exception {

@@ -1,9 +1,12 @@
 package ut.distcomp.util;
 
+import java.io.OutputStream;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.*;
 
-public class Queue<String> extends ConcurrentLinkedQueue<String> {
+import ut.distcomp.replica.InputPacket;
+
+public class Queue<InputPacket> extends ConcurrentLinkedQueue<InputPacket> {
 	private final Lock lock = new ReentrantLock();
 	private final Condition notEmpty = lock.newCondition();
 
@@ -11,10 +14,10 @@ public class Queue<String> extends ConcurrentLinkedQueue<String> {
 		super();
 	}
 	
-	public boolean offer(String str) {
+	public boolean offer(InputPacket packet) {
 		lock.lock();
 		try {
-			boolean status = super.offer(str);
+			boolean status = super.offer(packet);
 			notEmpty.signal();
 			return status;
 		}
@@ -23,7 +26,7 @@ public class Queue<String> extends ConcurrentLinkedQueue<String> {
 		}
 	}
 	
-	public String poll() {
+	public InputPacket poll() {
 		lock.lock();
 		try {
 			while (this.size() == 0) {
@@ -34,7 +37,7 @@ public class Queue<String> extends ConcurrentLinkedQueue<String> {
 					e.printStackTrace();
 				}
 			}
-			String result = super.poll();
+			InputPacket result = super.poll();
 			return result;
 		} finally {
 			lock.unlock();
