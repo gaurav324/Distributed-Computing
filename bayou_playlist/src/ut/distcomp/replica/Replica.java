@@ -172,6 +172,28 @@ public class Replica {
 							}
 							break;
 						}
+						case DISCONNECT: {
+							config.logger.info("Going to disconnect from the given servers.");
+							String nodeToDisconnect = null;
+							if (!message.payLoad.equals("X")) {
+								nodeToDisconnect = message.payLoad;
+								controller.disconnect(nodeToDisconnect);
+							} else {
+								controller.forgetAll();
+							}
+							break;
+						}
+						case CONNECT: {
+							config.logger.info("Going to connect to the given set of servers.");
+							String nodeToConnect = null;
+							if (!message.payLoad.equals("X")) {
+								nodeToConnect = message.payLoad;
+								controller.connect(nodeToConnect);
+							} else {
+								controller.connectAll();
+							}
+							break;
+						}
 					}
 				}
 			}
