@@ -12,81 +12,9 @@ process_no_tuple_map = {}
 process_no_pid_map = {}
 proc_count = -1
 my_replicaId = 0
-my_latest_write = ""
+my_latest_write = "X"
 my_Id = -1;
 
-def connect_replica(opts, args):
-    global process_no_tuple_map
-    global process_no_pid_map
-    global proc_count
-    global my_replicaId #if my replicaId doesn't respond we need to assign a new replica.
-    global my_Id
-
-    my_Id = opts.client_ID
-    my_replicaId = opts.my_replicaId
-    process_no_pid_map = {}
-    process_no_tuple_map = {}
-
-    f = open("/Users/Gill/Documents/Distri_projects/distri-projects/bayou_playlist/intial_config.properties")
-    content = f.readline()
-    lines = f.readlines()
-
-    i=0
-    for line in lines:
-        if line.startswith("port"):
-            port = int(line.split("=")[1])
-            continue
-        elif line.startswith("host"):
-            host = line.split("=")[1].strip()
-        else:
-            continue
-        process_no_tuple_map[i] = (host, port)
-        i += 1
-
-    f.close()
-    
-    # Total number of process.
-    proc_count = int(content.split("=")[1])
-    print "Total process to spawn: ", proc_count
-
-    
-    process_no_socket_map = {}
-    my_replicaActive = 1
-
-    time.sleep(3)
-    for no, tup in process_no_tuple_map.iteritems():
-	print no
-	print my_replicaId
-	print "\n"
-	if(no == my_replicaId):  #this not WORKING
-	    print "inside\n"
-	    s = socket.socket()
-	    print tup
-	    #!!! have to put logic for READ my WRITES.
-	    #!!! contact a server, connect and ask if server has the latest data if yes .... i am reading my writes.
-	    s.connect(tup)
-	    s.send("-1--READ--READ--clientId==my_Id&")
-	    my_latest_write = s.recv(6553600)
-
-	    if(my_latest_write):
-		my_replicaActive = 1
-	    else:
-		my_replicaActive = 0	
-	
-	    process_no_socket_map[no] = s
-
-    for no, tup in process_no_tuple_map.iteritems():
-	s = socket.socket()
-	print tup
-	s.connect(tup)
-	s.send("-1--READ--READ--clientId==my_Id&")
-	latest_write = s.recv(6553600) #will recieve latest write from the 
-	if(my_latest_write == latest_write):
-	    my_replicaId = no
-	else:
-	    continue
-
-    return (process_no_pid_map, process_no_socket_map)
 
 def read_config():
     global process_no_tuple_map
@@ -176,30 +104,30 @@ def command(cmd):
 	print tup
 	s.connect(tup)
 	
-	cmd_str = ("-1--OPERATION--" + command[0] + "==" + command[0] + "&")
+	cmd_str = ("-1--" + command[0] + "--" + my_latest_write + "&")
 
 	print cmd_str
 	response = s.send(cmd_str)
 	print response
-	if(response):
-	    print response
-	else:
+	if(response == "NO"):
+	    print "Cannot establish session with my_relica" + my_replicaId
 	    for no, tup in process_no_tuple_map.iteritems():
 		if(no != int(my_replicaId)):
 		    s = socket.socket()
 		    print tup
 		    s.connect(tup)
-		    cmd_str = ("-1--OPERATION--" + command[0] + "==" + my_latest_write + "&")
+		    cmd_str = ("-1--" + command[0] + "--" + my_latest_write + "&")
 		    s.send(cmd_str)
-		    response = s.recv(6553600) #will recieve latest write from the 
-		    if(reponse == "YES"):
+		    response = s.recv(1024) #will recieve latest write from the 
+		    if(reponse == "NO"):
+			continue
+		    else:
 			my_replicaId = str(no)
 			print "koi mil gaya\n"
-			
- 
-
-
+    
+	    			
 	print command[0]
+
     elif(command[0] in valid_commands):
 	tup = process_no_tuple_map[int(my_replicaId)]
 	s = socket.socket()
@@ -211,7 +139,6 @@ def command(cmd):
 	s.send(cmd_str)
 	my_latest_write = s.recv(1024)
 	print my_latest_write
-#conn[0].send("-1--ADD--ADD==tumhiho2==http://Aashiqui&");
     else:
 	print "Not a valid command\n"	
 	
