@@ -99,6 +99,12 @@ public class Replica {
 							} catch (SongNotFoundException e) {
 								System.out.println(e.getMessage());
 								config.logger.warning(e.getMessage());
+								try {
+									msgPacket.out.write(e.getMessage().getBytes());
+									msgPacket.out.flush();
+								} catch (IOException ex) {
+									ex.printStackTrace();
+								}
 								e.printStackTrace();
 							}
 							break;
@@ -133,12 +139,60 @@ public class Replica {
 						}
 						case READ: {
 							config.logger.info("Replying back to the read.");
+							String[] payLoad = message.payLoad.split("==");
+							if (!payLoad[0].equals("X")) {
+								long acceptStamp = Long.parseLong(payLoad[0]);
+								String server_id = payLoad[1];
+								
+								if (!server_id.equals(processId)) {
+									boolean entryFound = false;
+									for (Command cmd : cmds.cmds) {
+										if (cmd.acceptStamp == acceptStamp && cmd.serverId.equals(server_id)) {
+											entryFound = true;
+											break;
+										}
+									}
+									if (!entryFound) {
+										try {
+											msgPacket.out.write("NO".getBytes());
+											msgPacket.out.flush();
+										} catch (IOException e) {
+											e.printStackTrace();
+										}
+										break;
+									}
+								}
+							}
+							
 							try {
 								msgPacket.out.write(playlist.toString().getBytes());
 								msgPacket.out.flush();
 							} catch (IOException e) {
 								e.printStackTrace();
 							}
+							break;
+						}
+						case DISCONNECT: {
+							config.logger.info("Going to disconnect from the given servers.");
+							String nodeToDisconnect = null;
+							if (!message.payLoad.equals("X")) {
+								nodeToDisconnect = message.payLoad;
+								controller.disconnect(nodeToDisconnect);
+							} else {
+								controller.forgetAll();
+							}
+							break;
+						}
+						case CONNECT: {
+							config.logger.info("Going to connect to the given set of servers.");
+							String nodeToConnect = null;
+							if (!message.payLoad.equals("X")) {
+								nodeToConnect = message.payLoad;
+								controller.connect(nodeToConnect);
+							} else {
+								controller.connectAll();
+							}
+							break;
 						}
 					}
 				}

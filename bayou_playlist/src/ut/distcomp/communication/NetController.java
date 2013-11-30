@@ -161,4 +161,24 @@ public class NetController {
 		
 	}
 
+	public void disconnect(String nodeToDisconnect) {
+		outSockets.remove(nodeToDisconnect);
+	}
+	
+	public void connect(String nodeToConnect) {
+		if (!outSockets.containsKey(nodeToConnect)) {
+			outSockets.put(nodeToConnect, null);
+		}
+	}
+	
+	public void forgetAll() {
+		outSockets.clear();
+	}
+	
+	public void connectAll() {
+		for (String node: this.config.addresses.keySet()) {
+			connect(node);
+		}
+	}
+
 }

@@ -9,4 +9,8 @@ public enum MessageType {
 	
 	// Read.
 	READ,
+	
+	// DISCONNECT and CONNECT.
+	DISCONNECT,
+	CONNECT,
 }
