@@ -3,7 +3,7 @@ package ut.distcomp.replica;
 import java.io.OutputStream;
 
 public class InputPacket {
-	String msg;
+	public String msg;
 	OutputStream out;
 	
 	public InputPacket(String msg, OutputStream out) {

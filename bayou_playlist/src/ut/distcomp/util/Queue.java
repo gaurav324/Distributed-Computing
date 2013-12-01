@@ -9,15 +9,20 @@ import ut.distcomp.replica.InputPacket;
 public class Queue<InputPacket> extends ConcurrentLinkedQueue<InputPacket> {
 	private final Lock lock = new ReentrantLock();
 	private final Condition notEmpty = lock.newCondition();
+	public static boolean pausedFlag = false;
 
 	public Queue() {
 		super();
 	}
 	
-	public boolean offer(InputPacket packet) {
+	public boolean offer(ut.distcomp.replica.InputPacket packet) {
 		lock.lock();
 		try {
-			boolean status = super.offer(packet);
+			if (packet.msg.startsWith("continue")) {
+				notEmpty.signal();
+				return true;
+			}
+			boolean status = super.offer((InputPacket) packet);
 			notEmpty.signal();
 			return status;
 		}
@@ -29,11 +34,10 @@ public class Queue<InputPacket> extends ConcurrentLinkedQueue<InputPacket> {
 	public InputPacket poll() {
 		lock.lock();
 		try {
-			while (this.size() == 0) {
+			while (this.size() == 0 || pausedFlag) {
 				try {
 					notEmpty.await();
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}

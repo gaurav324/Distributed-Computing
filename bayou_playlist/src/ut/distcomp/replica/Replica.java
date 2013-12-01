@@ -80,7 +80,12 @@ public class Replica {
 									CSN = cmds.getMaxCSN();
 									CSN += 1;
 								}
-								long acceptStamp = System.currentTimeMillis()/1000 + 1;
+								try {
+									Thread.sleep(1000);
+								} catch (Exception ex) {
+									ex.printStackTrace();
+								}
+								long acceptStamp = System.currentTimeMillis()/1000;
 								Command cmd = new Command(CSN, acceptStamp, processId, op);
 								cmds.add(cmd);
 								cmds.writeToFile();

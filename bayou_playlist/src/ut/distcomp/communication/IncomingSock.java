@@ -64,7 +64,16 @@ public class IncomingSock extends Thread {
 					int curIdx;
 					while ((curIdx = dataStr.indexOf(MSG_SEP, curPtr)) != -1) {
 						InputPacket packet = new InputPacket(dataStr.substring(curPtr, curIdx), out);
-						queue.offer(packet);
+						if (packet.msg.startsWith("pause")) {
+							conf.logger.info("Going to pause the process.");
+							Queue.pausedFlag = true;
+						} else if (packet.msg.startsWith("continue")) {
+							conf.logger.info("Going to resume the process.");
+							Queue.pausedFlag = false;
+							queue.offer(packet);
+						} else {
+							queue.offer(packet);
+						}
 						String x = dataStr.substring(curPtr, curIdx);
 						curPtr = curIdx + 1;
 					}

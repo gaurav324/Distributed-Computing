@@ -46,6 +46,7 @@ public class Playlist {
 	
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
+		builder.append("Playlist: \n");
 		for (String key: playList.keySet()) {
 			builder.append(key + " : " + playList.get(key));
 			builder.append("\n");
