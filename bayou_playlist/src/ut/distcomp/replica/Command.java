@@ -48,7 +48,13 @@ public class Command implements Serializable {
 		command.append(Command.SEPARATOR);
 		command.append(this.serverId);
 		command.append(Command.SEPARATOR);
-		command.append(this.operation.toString());
+		String opString;
+		if (this.operation instanceof AddRetireOperation) {
+			opString = ((AddRetireOperation)this.operation).toString();
+		} else {
+			opString = this.operation.toString();
+		}
+		command.append(opString);
 		
 		return command.toString();
 	}
@@ -61,7 +67,7 @@ public class Command implements Serializable {
 			Command newCmd = new Command(Integer.parseInt(commandSplit[0]), 
 					Integer.parseInt(commandSplit[1]), 
 					commandSplit[2],
-					Operation.operationFromString(commandSplit[3]));
+					AddRetireOperation.operationFromString(commandSplit[3]));
 			return newCmd;
 		} catch (Exception ex) {
 			ex.printStackTrace();

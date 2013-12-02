@@ -34,9 +34,9 @@ import ut.distcomp.util.Queue;
  *
  */
 public class NetController {
-	private final Config config;
+	public final Config config;
 	private final List<IncomingSock> inSockets;
-	private final HashMap<String, OutgoingSock> outSockets;
+	public final HashMap<String, OutgoingSock> outSockets;
 	private final ListenServer listener;
 	
 	public NetController(String processId, Config config, Queue<InputPacket> queue) {
@@ -75,15 +75,15 @@ public class NetController {
 	{
 		Set<String> keySet = new HashSet<String>(outSockets.keySet());
 		for (String processId: keySet) {
-			if (processId.equals(this.config.procNum) || exceptProcess.containsKey(processId)) {
+			if (processId.equals(this.config.procNum) || (exceptProcess != null && exceptProcess.containsKey(processId))) {
 				continue;
 			}
-			config.logger.info("Sending Message to " + processId + ".	");
 			sendMsg(processId, msg);
 		}
 	}
 	
 	public synchronized boolean sendMsg(String process, String msg) {
+		config.logger.info("Sending Message to " + process + ":	" + msg);
 		try {
 			if (outSockets.get(process) == null)
 				initOutgoingConn(process);
@@ -112,7 +112,7 @@ public class NetController {
 			}
 			//config.logger.info(String.format("Server %d: Msg to %d failed.", 
 			//	config.procNum, process));
-			config.logger.log(Level.FINE, String.format("Server %d: Socket to %d error", 
+			config.logger.log(Level.FINE, String.format("Server %s: Socket to %s error", 
 				config.procNum, process), e);
 			return false;
 		}

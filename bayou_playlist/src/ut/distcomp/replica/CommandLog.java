@@ -7,9 +7,13 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+
+import ut.distcomp.communication.NetController;
 
 public class CommandLog {
 	static final String COMMAND_SEPARATOR = "#";
@@ -64,13 +68,28 @@ public class CommandLog {
 	}
 	
 	// First sort all the commands and write them to file.
-	public void writeToFile() {
+	public void writeToFile(NetController controller) {
 		sort();
 		Replica.playlist.clear();
 		try {
 			PrintWriter writer = new PrintWriter(this.commandLogFileName, "UTF-8");
 			for(Command cmd: this.cmds) {
-				Replica.playlist.performOperation(cmd.operation);
+				if (cmd.operation instanceof AddRetireOperation) {
+					AddRetireOperation op = (AddRetireOperation)cmd.operation;
+					if (op.type == OperationType.RETIRE_NODE) {
+						controller.outSockets.remove(op.process_id);
+					} else {
+						controller.outSockets.put(op.process_id, null);
+						try {
+							controller.config.ports.put(op.process_id, Integer.parseInt(op.port));
+							controller.config.addresses.put(op.process_id, InetAddress.getByName(op.host));
+						} catch (UnknownHostException e) {
+							e.printStackTrace();
+						}
+					}
+				} else {
+					Replica.playlist.performOperation(cmd.operation);
+				}
 				writer.write(cmd.toString());
 				writer.write("\n");
 			}
@@ -96,13 +115,19 @@ public class CommandLog {
 			builder.append(cmd.toString());
 			builder.append(CommandLog.COMMAND_SEPARATOR);
 		}
-		return builder.substring(0, builder.length() - 1).toString();
+		if (builder.length() > 2) {
+			return builder.substring(0, builder.length() - 1).toString();
+		}
+		return "X";
 	}
 	
 	public static ArrayList<Command> deSerializeCommands(String cmdString) {
 		String[] cmds = cmdString.split(CommandLog.COMMAND_SEPARATOR);
 	
 		ArrayList<Command> cmdList = new ArrayList<Command>();
+		if (cmds[0].equals("X")) {
+			return cmdList;
+		}
 		for (String cmd: cmds) {
 			Command c = Command.fromString(cmd);
 			if (c != null) {

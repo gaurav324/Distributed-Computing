@@ -79,8 +79,8 @@ public class Config {
 		addresses = new HashMap<String, InetAddress>();
 		ports = new HashMap<String, Integer>();
 		for (int i=0; i < numProcesses; i++) {
-			ports.put("" + i, loadInt(prop, "port" + i));
-			addresses.put("" + i, InetAddress.getByName(prop.getProperty("host" + i).trim()));
+			ports.put(prop.getProperty("proc" + i), loadInt(prop, "port" + i));
+			addresses.put(prop.getProperty("proc" + i), InetAddress.getByName(prop.getProperty("host" + i).trim()));
 		}
 		if (prop.getProperty("procNum") != null) {
 			procNum = prop.getProperty("procNum");
