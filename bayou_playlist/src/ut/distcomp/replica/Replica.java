@@ -46,6 +46,10 @@ public class Replica {
 	// requests for more retires.
 	String parentRetiringProcessId;
 	
+	public static boolean isIsolated;
+	
+	public static HashMap<String, Boolean> disconnectedNodes = new HashMap<String, Boolean>();
+	
 	public Replica(String processId) {
 		this.processId = processId;
 		this.cmds = new CommandLog(this.processId);

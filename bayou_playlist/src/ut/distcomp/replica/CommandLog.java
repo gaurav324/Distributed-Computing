@@ -79,12 +79,14 @@ public class CommandLog {
 					if (op.type == OperationType.RETIRE_NODE) {
 						controller.outSockets.remove(op.process_id);
 					} else {
-						controller.outSockets.put(op.process_id, null);
-						try {
-							controller.config.ports.put(op.process_id, Integer.parseInt(op.port));
-							controller.config.addresses.put(op.process_id, InetAddress.getByName(op.host));
-						} catch (UnknownHostException e) {
-							e.printStackTrace();
+						if (!Replica.disconnectedNodes.containsKey(op.process_id)) {
+							controller.outSockets.put(op.process_id, null);
+							try {
+								controller.config.ports.put(op.process_id, Integer.parseInt(op.port));
+								controller.config.addresses.put(op.process_id, InetAddress.getByName(op.host));
+							} catch (UnknownHostException e) {
+								e.printStackTrace();
+							}
 						}
 					}
 				} else {

@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 
 import ut.distcomp.replica.InputPacket;
+import ut.distcomp.replica.Replica;
 import ut.distcomp.util.Queue;
 
 /**
@@ -162,16 +163,21 @@ public class NetController {
 	}
 
 	public void disconnect(String nodeToDisconnect) {
+		Replica.disconnectedNodes.put(nodeToDisconnect, true);
 		outSockets.remove(nodeToDisconnect);
 	}
 	
 	public void connect(String nodeToConnect) {
 		if (!outSockets.containsKey(nodeToConnect)) {
+			Replica.disconnectedNodes.remove(nodeToConnect);
 			outSockets.put(nodeToConnect, null);
 		}
 	}
 	
 	public void forgetAll() {
+		for (String pid : outSockets.keySet()) {
+			Replica.disconnectedNodes.put(pid, true);
+		}
 		outSockets.clear();
 	}
 	
@@ -179,6 +185,7 @@ public class NetController {
 		for (String node: this.config.addresses.keySet()) {
 			connect(node);
 		}
+		Replica.disconnectedNodes.clear();
 	}
 
 }
