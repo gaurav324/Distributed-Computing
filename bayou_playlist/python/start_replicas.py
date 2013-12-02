@@ -11,35 +11,42 @@ execute_command = """java -classpath %(root)s/bin -DCONFIG_NAME="%(root)s/intial
 
 #java -classpath ./bin -DLOG_FOLDER=/tmp -DCONFIG_NAME=./intial_config.properties ut.distcomp.replica.Replica  0
 
-process_no_tuple_map = {}
 process_no_pid_map = {}
 proc_count = -1
 def start_process(opts, args):
-    global process_no_tuple_map
     global process_no_pid_map
     global proc_count
 
     process_no_pid_map = {}
     process_no_tuple_map = {}
 
-    f = open("/Users/Gill/Documents/Distri_projects/distri-projects/bayou_playlist/intial_config.properties")
+    f_client = open(opts.root +  "/intial_config_new.properties","w")
+    f = open(opts.root +  "/intial_config.properties")
+    f.readline()
     content = f.readline()
     lines = f.readlines()
+    process_number = {}
 
     i=0
+    
     for line in lines:
         if line.startswith("port"):
             port = int(line.split("=")[1])
             continue
-        elif line.startswith("host"):
+        elif line.startswith("proc"):
+	    process_number[i] = str(line.split("=")[1].strip())
+	    print process_number[i]
+	    continue
+	elif line.startswith("host"):
             host = line.split("=")[1].strip()
         else:
             continue
-        process_no_tuple_map[i] = (host, port)
+	
+        process_no_tuple_map[process_number[i]] = (host, port)
         i += 1
-
+    f_client.write(str(process_no_tuple_map))
     f.close()
-    
+    f_client.close() 
     # Total number of process.
     proc_count = int(content.split("=")[1])
     print "Total process to spawn: ", proc_count
@@ -49,9 +56,9 @@ def start_process(opts, args):
         default_message_count = -1
         default_sending_process = -1
         
-         
+        print process_number[proc_no]
         command = execute_command % {'root' : opts.root, 
-                                     'process_no' : proc_no,
+                                     'process_no' : process_number[proc_no],
                                     }
         print "Going to execute: ", command
         args = shlex.split(command)
@@ -59,12 +66,6 @@ def start_process(opts, args):
     
     process_no_socket_map = {}
     time.sleep(3)
-#    for no, tup in process_no_tuple_map.iteritems():
- #       s = socket.socket()
-  #      print tup
-   #     s.connect(tup)
-    #    process_no_socket_map[no] = s
-
     return (process_no_pid_map, process_no_socket_map)
 
 def getopts():
