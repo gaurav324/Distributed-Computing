@@ -229,7 +229,7 @@ def leave(x):
     response = s.recv(1024)
     if (not response.startswith("NO")):
         del process_no_tuple_map[x]
-        for processId in process_no_tuple_map:
+        for processId in sorted(process_no_tuple_map):
             my_replicaId = processId
             break
         f = open(opts.root +  "/intial_config_new.properties","w")
@@ -288,9 +288,10 @@ if __name__ == "__main__":
     my_replicaId = opts.my_replicaId
     my_Id = opts.client_ID
 
-    for processId in process_no_tuple_map:
-        my_replicaId = processId
-        break
+    if my_replicaId not in process_no_tuple_map:
+        for processId in sorted(process_no_tuple_map):
+            my_replicaId = processId
+            break
 
     from IPython import embed
     embed()
