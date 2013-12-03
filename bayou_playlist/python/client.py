@@ -219,6 +219,7 @@ def leave(x):
     read_config()
     x = str(x)
     global process_no_tuple_map
+    global my_replicaId
     
     s = ensure_connect(x)
     cmd_str = str(my_Id) + "--RETIRE--X&"
@@ -226,34 +227,16 @@ def leave(x):
     print "Sending: " + cmd_str + " to " + x
 
     response = s.recv(1024)
-    if (response != "NO"):
+    if (not response.startswith("NO")):
         del process_no_tuple_map[x]
+        for processId in process_no_tuple_map:
+            my_replicaId = processId
+            break
         f = open(opts.root +  "/intial_config_new.properties","w")
         f.write(str(process_no_tuple_map))
         f.close()
     else:
         print "Replica " + x + " rejected the leave request."
-
-#def leave(x):
-#    read_config()
-#    global process_no_tuple_map
-#
-#    # Sending message to i to retire
-#    s = socket.socket()
-#    tup = process_no_tuple_map[x]
-#    s.connect(tup)
-#    cmd_str = "leave&"
-#    s.send(cmd_str)
-#    print cmd_str
-#    response = s.recv(1024)
-#    if(response != "NO"):
-#        del process_no_tuple_map[x]
-#        f = open(opts.root +  "/intial_config_new.properties","w")
-#        f.write(str(process_no_tuple_map))
-#        f.close()
-#    else:
-#        print "Could not leave node: "+ x + "\n"
-
 
 def read_config():
     global process_no_tuple_map
@@ -296,13 +279,19 @@ def getopts():
     return opts, args
 
 if __name__ == "__main__":
+    global my_replicaId
+
     opts, args = getopts()
     read_config()
     print "Initial list of servers: " + str(process_no_tuple_map)
 
     my_replicaId = opts.my_replicaId
     my_Id = opts.client_ID
-    
+
+    for processId in process_no_tuple_map:
+        my_replicaId = processId
+        break
+
     from IPython import embed
     embed()
 

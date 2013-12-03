@@ -222,7 +222,7 @@ public class Replica {
 						case RETIRE: {
 							if (retiringState == RetiringState.CANNOT_RETIRE) {
 								try {
-									msgPacket.out.write("Sorry cannot retire as in the middle of some other retiring".getBytes());
+									msgPacket.out.write("NO. Sorry cannot retire as in the middle of some other retiring".getBytes());
 									msgPacket.out.flush();
 								} catch (IOException e) {
 									e.printStackTrace();
@@ -231,9 +231,10 @@ public class Replica {
 							}
 							config.logger.info("Going to retire.");
 							
-							if (controller.outSockets.size() == 1) {
+							if (controller.outSockets.size() == 0 ||
+									(controller.outSockets.size() == 1 && controller.outSockets.keySet().contains(processId))) {
 								try {
-									msgPacket.out.write("Cannot retire, as isolated from everyone.".getBytes());
+									msgPacket.out.write("NO. Cannot retire, as isolated from everyone.".getBytes());
 									msgPacket.out.flush();
 								} catch (IOException e) {
 									e.printStackTrace();
